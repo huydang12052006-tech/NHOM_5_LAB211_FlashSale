@@ -4,25 +4,23 @@
  */
 package model.entity;
 
+import model.BaseEntity.BaseEntity;
 import model.enums.LockMechanism;
 import model.enums.OrderStatus;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-public class Order {
+public class Order extends BaseEntity {
 
-    private static final DateTimeFormatter FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter FORMATTER
+            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    private String id;
     private String customerId;
     private String eventId;
     private double totalAmount;
     private OrderStatus status;
     private LockMechanism lockMechanism;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
     // Default constructor
     public Order() {
@@ -30,36 +28,26 @@ public class Order {
 
     // Full constructor
     public Order(String id,
-                 String customerId,
-                 String eventId,
-                 double totalAmount,
-                 OrderStatus status,
-                 LockMechanism lockMechanism,
-                 LocalDateTime createdAt,
-                 LocalDateTime updatedAt) {
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt,
+            String customerId,
+            String eventId,
+            double totalAmount,
+            OrderStatus status,
+            LockMechanism lockMechanism) {
 
-        this.id = id;
+        super(id, createdAt, updatedAt);
         this.customerId = customerId;
         this.eventId = eventId;
         this.totalAmount = totalAmount;
         this.status = status;
         this.lockMechanism = lockMechanism;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+
     }
 
     // =========================
     // Getter & Setter
     // =========================
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
     public String getCustomerId() {
         return customerId;
     }
@@ -100,74 +88,60 @@ public class Order {
         this.lockMechanism = lockMechanism;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+// =========================
+// CSV Methods
+// =========================
+@Override
+public String toCsvLine() {
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
+    return String.join(",",
+            escapeCsv(getId()),
+            formatDateTime(getCreatedAt()),
+            formatDateTime(getUpdatedAt()),
+            escapeCsv(customerId),
+            escapeCsv(eventId),
+            String.valueOf(totalAmount),
+            status.name(),
+            lockMechanism.name()           
+    );
+}
 
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
+@Override
+public void fromCsvLine(String csv) {
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    String[] parts = csv.split(",", -1);
 
-    // =========================
-    // CSV Methods
-    // =========================
+    setId(parts[0]);
 
-    public String toCsvLine() {
-        return String.join(",",
-                escape(id),
-                escape(customerId),
-                escape(eventId),
-                String.valueOf(totalAmount),
-                status.name(),
-                lockMechanism.name(),
-                createdAt.format(FORMATTER),
-                updatedAt.format(FORMATTER)
-        );
-    }
+    this.customerId = parts[1];
 
-    public static Order fromCsvLine(String csvLine) {
+    this.eventId = parts[2];
 
-        String[] parts = csvLine.split(",", -1);
+    this.totalAmount = Double.parseDouble(parts[3]);
 
-        return new Order(
-                parts[0],
-                parts[1],
-                parts[2],
-                Double.parseDouble(parts[3]),
-                OrderStatus.valueOf(parts[4]),
-                LockMechanism.valueOf(parts[5]),
-                LocalDateTime.parse(parts[6], FORMATTER),
-                LocalDateTime.parse(parts[7], FORMATTER)
-        );
-    }
+    this.status = OrderStatus.valueOf(parts[4]);
 
-    // =========================
-    // Helper
-    // =========================
+    this.lockMechanism =
+            LockMechanism.valueOf(parts[5]);
 
-    private static String escape(String value) {
-        return value == null ? "" : value.replace(",", " ");
-    }
+    super.setCreatedAt(parseDateTime(parts[6]));
 
-    @Override
-    public String toString() {
-        return "Order{" +
-                "id='" + id + '\'' +
-                ", customerId='" + customerId + '\'' +
-                ", eventId='" + eventId + '\'' +
-                ", totalAmount=" + totalAmount +
-                ", status=" + status +
-                ", lockMechanism=" + lockMechanism +
-                ", createdAt=" + createdAt +
-                ", updatedAt=" + updatedAt +
-                '}';
-    }
+    super.setUpdatedAt(parseDateTime(parts[7]));
+}
+
+@Override
+public String toString() {
+
+    return "Order{" +
+            "id='" + getId() + '\'' +
+            ", customerId='" + customerId + '\'' +
+            ", eventId='" + eventId + '\'' +
+            ", totalAmount=" + totalAmount +
+            ", status=" + status +
+            ", lockMechanism=" + lockMechanism +
+            ", createdAt=" + getCreatedAt() +
+            ", updatedAt=" + getUpdatedAt() +
+            '}';
+}
+
 }

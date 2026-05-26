@@ -1,7 +1,10 @@
+# AI AUDIT LOG — FLASH SALE CONCURRENCY PROJECT
 
-# AI AUDIT LOG — INDIVIDUAL ENTRY
+## ENTRY 01 — NGHIÊN CỨU SYNCHRONIZED VÀ FILE_LOCK
 
-## ENTRY 03 — PHÁT HIỆN ẢO GIÁC AI VỀ PAYMENT SYSTEM
+### Responsibility Area
+
+Order Flow & Concurrency Module
 
 ---
 
@@ -9,6 +12,88 @@
 
 Tôi phụ trách module Order & Concurrency trong project Flash Sale MVC.
 Trong quá trình mở rộng order flow, tôi cần bổ sung bước chọn phương thức thanh toán sau khi đặt hàng thành công.
+
+---
+
+
+### Prompt
+
+"Điểm khác nhau giữa synchronized và file lock là gì trong hệ thống flash sale CSV multi-threading?"
+
+---
+
+### AI Output Summary
+
+AI giải thích:
+
+SYNCHRONIZED:
+
+* khóa trong memory
+* chỉ hoạt động trong JVM hiện tại
+* tốc độ nhanh hơn
+* dùng synchronized method/block
+
+FILE_LOCK:
+
+* khóa trực tiếp file CSV bằng Java NIO FileLock
+* hoạt động ở OS level
+* nhiều process vẫn bị khóa
+* I/O overhead cao hơn
+
+---
+
+### Personal Decision
+
+Tôi CHẤP NHẬN việc implement cả synchronized và FileLock.
+
+Tôi quyết định:
+
+* dùng synchronized cho memory locking benchmark
+* dùng FileLock cho file-level locking benchmark
+
+Mục tiêu:
+
+* so sánh throughput
+* so sánh consistency
+* nghiên cứu trade-off giữa performance và safety
+
+---
+
+### Human Delta
+
+1. Tôi bổ sung requirement:
+   FILE_LOCK phải release lock bằng try-with-resources.
+
+2. Tôi bổ sung benchmark throughput giữa synchronized và FileLock.
+
+3. Tôi xác định synchronized chỉ phù hợp single JVM.
+
+4. Tôi bổ sung giải thích:
+   FileLock hoạt động ở OS level thay vì JVM level.
+
+---
+
+### Evidence
+
+Lock mechanisms cuối cùng được implement:
+
+* NO_LOCK
+* SYNCHRONIZED
+* FILE_LOCK
+* OPTIMISTIC_LOCK
+---
+
+### Reflection
+
+Prompt này giúp tôi hiểu rõ sự khác nhau giữa memory-level synchronization và OS-level file synchronization.
+
+Ban đầu tôi nghĩ synchronized có thể khóa trực tiếp file CSV, nhưng sau khi phân tích AI output và tài liệu Java NIO, tôi nhận ra synchronized chỉ hoạt động trong JVM hiện tại.
+
+Tôi không sử dụng nguyên AI output mà bổ sung thêm benchmark analysis và release lock handling để phù hợp research question của project.
+
+====================================================================
+
+## ENTRY 02 — PHÁT HIỆN ẢO GIÁC AI VỀ PAYMENT SYSTEM
 
 ---
 

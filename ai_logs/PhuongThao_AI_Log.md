@@ -66,7 +66,7 @@ Chỉ giữ lại:
 
 Tôi quyết định hệ thống chỉ hỗ trợ:
 
-* COD
+* CASH
 * BANKING
 
 ---
@@ -83,15 +83,12 @@ Tôi quyết định hệ thống chỉ hỗ trợ:
 
 2. Tôi bỏ PaymentStatus vì hệ thống không xử lý transaction thật.
 
-3. Tôi đổi enum từ CASH thành COD để đúng ngữ cảnh ecommerce.
+3. Tôi đơn giản hóa PaymentController chỉ còn:
 
-4. Tôi đơn giản hóa PaymentController chỉ còn:
-
-   * create payment
    * choose payment method
    * save payment information
 
-5. Tôi giảm scope xuống simple payment selection để tránh over-engineering.
+. Tôi giảm scope xuống simple payment selection để tránh over-engineering.
 
 ---
 
@@ -100,7 +97,7 @@ Tôi quyết định hệ thống chỉ hỗ trợ:
 PaymentMethod cuối cùng:
 
 public enum PaymentMethod {
-COD,
+,
 BANKING
 }
 

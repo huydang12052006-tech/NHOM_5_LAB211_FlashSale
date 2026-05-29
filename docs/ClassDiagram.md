@@ -1,4 +1,4 @@
-``` mermaid
+```mermaid
 classDiagram
 direction LR
 	namespace MODEL {
@@ -6,6 +6,12 @@ direction LR
 	        -id: String
 	        -createdAt: LocalDateTime
 	        -updatedAt: LocalDateTime
+            +getId() String
+	        +setId(id: String) void
+            +getCreatedAt() LocalDateTime
+	        +setCreatedAt(createdAt: LocalDateTime) void
+	        +getUpdatedAt() LocalDateTime
+	        +setUpdatedAt(updatedAt: LocalDateTime) void
 	        +toCsvLine() String
 	        +fromCsvLine(csv: String) void
         }
@@ -155,15 +161,10 @@ direction LR
         }
 
         class User {
-	        -id: String
 	        -username: String
 	        -passwordHash: String
 	        -role: UserRole
 	        -active: boolean
-	        -createdAt: LocalDateTime
-	        -updatedAt: LocalDateTime
-	        +getId() String
-	        +setId(id: String) void
 	        +getUsername() String
 	        +setUsername(username: String) void
 	        +getPasswordHash() String
@@ -172,21 +173,13 @@ direction LR
 	        +setRole(role: String) void
 	        +isActive() boolean
 	        +setActive(active: boolean) void
-	        +getCreatedAt() LocalDateTime
-	        +setCreatedAt(createdAt: LocalDateTime) void
-	        +getUpdatedAt() LocalDateTime
-	        +setUpdatedAt(updatedAt: LocalDateTime) void
-        }
+}
 
         class Payment {
-	        -id: String
 	        -orderId: String
 	        -customerId: String
 	        -paymentMethod: PaymentMethod
 	        -amount: double
-	        -createdAt: LocalDateTime
-	        +getId() String
-	        +setId(id: String) void
 	        +getOrderId() String
 	        +setOrderId(orderId: String) void
 	        +getCustomerId() String
@@ -195,9 +188,7 @@ direction LR
 	        +setPaymentMethod(paymentMethod: PaymentMethod) void
 	        +getAmount() double
 	        +setAmount(amount: double) void
-	        +getCreatedAt() LocalDateTime
-	        +setCreatedAt(createdAt: LocalDateTime) void
-        }
+}
 
 	}
 namespace ENUM {
@@ -413,6 +404,3 @@ namespace ENUM {
     CsvRepository <|-- FlashSaleRepository
     CsvRepository <|-- FlashSaleItemRepository
     CsvRepository <|-- UserRepository
-
-
-

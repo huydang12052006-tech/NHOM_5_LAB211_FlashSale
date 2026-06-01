@@ -8,25 +8,25 @@ public class Product extends BaseEntity {
     private String category;
     private double originalPrice;
     private int stockQty;
-    private int version; // Bắt buộc để Member B làm cơ chế khóa Optimistic Lock
-    private boolean active;
+    private int version; // Bắt buộc cho Optimistic Lock của Member B
+    private ActivationStatus status; // Chuẩn Enum full hệ thống thay cho boolean active
 
     public Product() {
         super();
+        this.status = ActivationStatus.ACTIVE; // Mặc định khi tạo mới là ACTIVE
     }
 
-    public Product(String id, String name, String category, double originalPrice, int stockQty, int version, boolean active) {
+    public Product(String id, String name, String category, double originalPrice, int stockQty, int version, ActivationStatus status) {
         super();
-        this.id = id;
+        this.setId(id); // Gọi hàm setId kế thừa theo đúng yêu cầu của Leader
         this.name = name;
         this.category = category;
         this.originalPrice = originalPrice;
         this.stockQty = stockQty;
         this.version = version;
-        this.active = active;
+        this.status = status;
     }
 
-    // Các hàm Getter và Setter cho các thuộc tính riêng của Product...
     public String getName() {
         return name;
     }
@@ -67,20 +67,20 @@ public class Product extends BaseEntity {
         this.version = version;
     }
 
-    public boolean isActive() {
-        return active;
+    public ActivationStatus getStatus() {
+        return status;
     }
 
-    public void setActive(boolean active) {
-        this.active = active;
+    public void setStatus(ActivationStatus status) {
+        this.status = status;
     }
 
     @Override
     public String toCsvLine() {
         return String.join(",",
-                this.id, this.name, this.category,
+                this.getId(), this.name, this.category,
                 String.valueOf(this.originalPrice), String.valueOf(this.stockQty),
-                String.valueOf(this.version), String.valueOf(this.active),
+                String.valueOf(this.version), this.status.name(), // Lưu tên Enum vào CSV (ACTIVE/INACTIVE/DELETED)
                 this.createdAt.toString(), this.updatedAt.toString()
         );
     }
@@ -94,7 +94,7 @@ public class Product extends BaseEntity {
         p.setOriginalPrice(Double.parseDouble(parts[3]));
         p.setStockQty(Integer.parseInt(parts[4]));
         p.setVersion(Integer.parseInt(parts[5]));
-        p.setActive(Boolean.parseBoolean(parts[6]));
+        p.setStatus(ActivationStatus.valueOf(parts[6])); // Đọc Enum từ chuỗi CSV
         p.setCreatedAt(LocalDateTime.parse(parts[7]));
         p.setUpdatedAt(LocalDateTime.parse(parts[8]));
         return p;

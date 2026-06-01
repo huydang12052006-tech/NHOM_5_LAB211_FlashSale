@@ -1,5 +1,6 @@
 package com.mycompany.flashsale.simulation.controller;
 
+import com.mycompany.flashsale.simulation.model.ActivationStatus;
 import com.mycompany.flashsale.simulation.model.FlashSaleEvent;
 import com.mycompany.flashsale.simulation.model.FlashSaleItem;
 import com.mycompany.flashsale.simulation.model.Product;
@@ -8,7 +9,6 @@ import com.mycompany.flashsale.simulation.repository.ProductRepository;
 
 import java.time.LocalDateTime;
 import java.util.Scanner;
-import java.util.Optional;
 
 public class FlashSaleController {
 
@@ -62,17 +62,20 @@ public class FlashSaleController {
         System.out.print("Nhap ID San pham muon dua vao sale: ");
         String productId = scanner.nextLine().trim();
 
-        // 2. Kiem tra san pham goc ton tai bằng vong lap co ban (Tranh loi Stream tren Java cu)
+        // 2. Kiem tra san pham goc ton tai và phải đang ở trạng thái ACTIVE (Yêu cầu nghiệp vụ hệ thống)
         Product product = null;
         for (Product p : productRepository.findAll()) {
             if (p.getId().equalsIgnoreCase(productId)) {
-                product = p;
+                // Kiểm tra xem sản phẩm có bị xóa mềm (DELETED) hoặc ngưng hoạt động (INACTIVE) chưa
+                if (p.getStatus() == ActivationStatus.ACTIVE) {
+                    product = p;
+                }
                 break;
             }
         }
 
         if (product == null) {
-            System.out.println("[Loi]: San pham nay khong ton tai trong kho goc!");
+            System.out.println("[Loi]: San pham nay khong ton tai hoac da bi xoa khoi kho goc!");
             return;
         }
 
@@ -89,7 +92,9 @@ public class FlashSaleController {
         }
 
         String itemId = "ITEM" + (System.currentTimeMillis() % 10000);
-        FlashSaleItem item = new FlashSaleItem(itemId, eventId, productId, flashPrice, limitedQty, 0, 1);
+
+        // CẬP NHẬT CHUẨN: Truyền thêm tham số thứ 8 là ActivationStatus.ACTIVE theo đúng thiết kế của Leader
+        FlashSaleItem item = new FlashSaleItem(itemId, eventId, productId, flashPrice, limitedQty, 0, 1, ActivationStatus.ACTIVE);
 
         flashSaleRepository.saveItem(item);
         System.out.println("[Thong bao]: Dua san pham vao Flash Sale thanh cong!");

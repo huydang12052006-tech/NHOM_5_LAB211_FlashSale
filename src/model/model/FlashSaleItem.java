@@ -10,20 +10,23 @@ public class FlashSaleItem extends BaseEntity {
     private int limitedQty;
     private int soldQty;
     private int version; // Bắt buộc cho Optimistic Lock của Member B
+    private ActivationStatus status; // Tích hợp Enum đồng bộ full hệ thống
 
     public FlashSaleItem() {
         super();
+        this.status = ActivationStatus.ACTIVE;
     }
 
-    public FlashSaleItem(String id, String eventId, String productId, double flashPrice, int limitedQty, int soldQty, int version) {
+    public FlashSaleItem(String id, String eventId, String productId, double flashPrice, int limitedQty, int soldQty, int version, ActivationStatus status) {
         super();
-        this.id = id;
+        this.setId(id); // Gọi hàm setId kế thừa từ BaseEntity theo chuẩn Leader
         this.eventId = eventId;
         this.productId = productId;
         this.flashPrice = flashPrice;
         this.limitedQty = limitedQty;
         this.soldQty = soldQty;
         this.version = version;
+        this.status = status;
     }
 
     public String getEventId() {
@@ -74,11 +77,20 @@ public class FlashSaleItem extends BaseEntity {
         this.version = version;
     }
 
+    public ActivationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ActivationStatus status) {
+        this.status = status;
+    }
+
     @Override
     public String toCsvLine() {
         return String.join(",",
-                this.id, this.eventId, this.productId, String.valueOf(this.flashPrice),
+                this.getId(), this.eventId, this.productId, String.valueOf(this.flashPrice),
                 String.valueOf(this.limitedQty), String.valueOf(this.soldQty), String.valueOf(this.version),
+                this.status.name(),
                 this.createdAt.toString(), this.updatedAt.toString()
         );
     }
@@ -93,8 +105,9 @@ public class FlashSaleItem extends BaseEntity {
         item.setLimitedQty(Integer.parseInt(parts[4]));
         item.setSoldQty(Integer.parseInt(parts[5]));
         item.setVersion(Integer.parseInt(parts[6]));
-        item.setCreatedAt(LocalDateTime.parse(parts[7]));
-        item.setUpdatedAt(LocalDateTime.parse(parts[8]));
+        item.setStatus(ActivationStatus.valueOf(parts[7]));
+        item.setCreatedAt(LocalDateTime.parse(parts[8]));
+        item.setUpdatedAt(LocalDateTime.parse(parts[9]));
         return item;
     }
 }

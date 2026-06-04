@@ -1,4 +1,4 @@
-```mermaid
+``` mermaid
 classDiagram
 direction LR
 	namespace MODEL {
@@ -251,6 +251,14 @@ namespace ENUM {
 	        +changePassword(userId: String,newPassword: String) void
         }
 
+		class CustomerRepository {
+	        +findAll() List~Customer~
+	        +findById(id: String) Customer
+	        +save(entity: ) void
+	        +update(customer: Customer) void
+	        +delete(id: String) void
+			        }
+
         class FlashSaleItemRepository {
 	        +sellWithNoLock(String flashItemId,int quantity) boolean
 	        +sellWithSynchronized(String flashItemId,int quantity) boolean
@@ -404,3 +412,4 @@ namespace ENUM {
     CsvRepository <|-- FlashSaleRepository
     CsvRepository <|-- FlashSaleItemRepository
     CsvRepository <|-- UserRepository
+    CsvRepository <|-- 	CustomerRepository

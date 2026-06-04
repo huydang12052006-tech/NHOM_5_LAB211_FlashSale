@@ -1,10 +1,11 @@
 package repository;
 
-import model.entity.BaseEntity;
+import model.BaseEntity.BaseEntity;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,13 +33,13 @@ public abstract class CsvRepository<T extends BaseEntity> {
     // FIND ALL
     // =====================================================
 
-    public List<T> findAll() throws IOException {
+    public List<T> findAll() {
 
         synchronized (lock) {
 
             List<T> result = new ArrayList<>();
 
-            Path path = Path.of(filePath);
+            Path path = Paths.get(filePath);
 
             if (!Files.exists(path)) {
                 return result;
@@ -52,14 +53,19 @@ public abstract class CsvRepository<T extends BaseEntity> {
 
                 while ((line = reader.readLine()) != null) {
 
-                    if (!line.isBlank()) {
+                    if (line != null && !line.trim().isEmpty()) {
 
                         result.add(
                                 mapFromCsv(line)
                         );
                     }
                 }
-            }
+            } catch (IOException e) {
+
+            System.out.println(
+                "[ERROR] " + e.getMessage()
+            );
+        }
 
             return result;
         }
@@ -69,7 +75,7 @@ public abstract class CsvRepository<T extends BaseEntity> {
     // FIND BY ID
     // =====================================================
 
-    public T findById(String id) throws IOException {
+    public T findById(String id) {
 
         List<T> entities = findAll();
 
@@ -87,7 +93,7 @@ public abstract class CsvRepository<T extends BaseEntity> {
     // SAVE
     // =====================================================
 
-    public void save(T entity) throws IOException {
+    public void save(T entity) {
 
         synchronized (lock) {
 
@@ -103,7 +109,12 @@ public abstract class CsvRepository<T extends BaseEntity> {
                 );
 
                 writer.newLine();
-            }
+            } catch (IOException e) {
+
+            System.out.println(
+                "[ERROR] " + e.getMessage()
+            );
+        }
         }
     }
 

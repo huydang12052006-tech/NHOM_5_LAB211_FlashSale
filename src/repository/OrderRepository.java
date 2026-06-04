@@ -3,9 +3,9 @@ package repository;
 import model.Entity.Order;
 
 
-public class OrderRepository extends CsvRepository<OrderRepository> {
+public class OrderRepository extends CsvRepository<Order> {
 
-    public FlashSaleRepository() {
+    public OrderRepository() {
         super("data/orders.csv");
     }
     // --- Quản lý Event ---

@@ -122,8 +122,7 @@ public abstract class CsvRepository<T extends BaseEntity> {
     // UPDATE
     // =====================================================
 
-    public boolean update(T updatedEntity)
-            throws IOException {
+    public boolean update(T updatedEntity) {
 
         synchronized (lock) {
 
@@ -187,8 +186,7 @@ public abstract class CsvRepository<T extends BaseEntity> {
     // REWRITE CSV
     // =====================================================
 
-    protected void rewriteFile(List<T> entities)
-            throws IOException {
+    protected void rewriteFile(List<T> entities) {
 
         try (BufferedWriter writer =
                      new BufferedWriter(
@@ -204,7 +202,12 @@ public abstract class CsvRepository<T extends BaseEntity> {
                 );
 
                 writer.newLine();
-            }
+            } 
+        } catch (IOException e) {
+
+            System.out.println(
+                "[ERROR] " + e.getMessage()
+            );
         }
     }
 }

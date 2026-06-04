@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package Controller;
+package controller;
 
 /**
  *
@@ -13,10 +13,10 @@ import exception.InvalidQuantityException;
 import exception.OutOfStockException;
 import exception.PurchaseLimitExceededException;
 
-import model.entity.Customer;
-import model.entity.FlashSaleItem;
+import model.Entity.Customer;
+import model.Entity.FlashSaleItem;
 
-import model.enums.LockMechanism;
+import model.Enum.LockMechanism;
 
 import repository.CustomerRepository;
 import repository.FlashSaleItemRepository;
@@ -129,40 +129,46 @@ public class OrderController {
         // CHOOSE LOCK MECHANISM
         // =========================
 
-        return switch (mechanism) {
+        boolean result;
 
-            case NO_LOCK ->
+        switch (mechanism) {
+            case NO_LOCK:
+                result = flashSaleItemRepository
+                        .sellWithNoLock(
+                                flashItemId,
+                                quantity
+                        );
+                break;
 
-                    flashSaleItemRepository
-                            .sellWithNoLock(
-                                    flashItemId,
-                                    quantity
-                            );
+            case SYNCHRONIZED:
+                result = flashSaleItemRepository
+                        .sellWithSynchronized(
+                                flashItemId,
+                                quantity
+                        );
+                break;
 
-            case SYNCHRONIZED ->
+            case FILE_LOCK:
+                result = flashSaleItemRepository
+                        .sellWithFileLock(
+                                flashItemId,
+                                quantity
+                        );
+                break;
 
-                    flashSaleItemRepository
-                            .sellWithSynchronized(
-                                    flashItemId,
-                                    quantity
-                            );
+            case OPTIMISTIC_LOCK:
+                result = flashSaleItemRepository
+                        .sellWithOptimisticLock(
+                                flashItemId,
+                                quantity
+                        );
+                break;
 
-            case FILE_LOCK ->
+            default:
+                throw new IllegalArgumentException("Unknown lock mechanism");
+        }
 
-                    flashSaleItemRepository
-                            .sellWithFileLock(
-                                    flashItemId,
-                                    quantity
-                            );
-
-            case OPTIMISTIC_LOCK ->
-
-                    flashSaleItemRepository
-                            .sellWithOptimisticLock(
-                                    flashItemId,
-                                    quantity
-                            );
-        };
+        return result;
     }
 }
 

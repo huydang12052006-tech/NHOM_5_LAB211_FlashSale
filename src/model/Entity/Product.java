@@ -90,14 +90,15 @@ public class Product extends BaseEntity {
     public void fromCsvLine(String csvLine) {
         String[] parts = csvLine.split(",");
         this.setId(parts[0]);
+        this.setCreatedAt(LocalDateTime.parse(parts[7]));
+        this.setUpdatedAt(LocalDateTime.parse(parts[8]));
         this.setName(parts[1]);
         this.setCategory(parts[2]);
         this.setOriginalPrice(Double.parseDouble(parts[3]));
         this.setStockQty(Integer.parseInt(parts[4]));
         this.setVersion(Integer.parseInt(parts[5]));
         this.setStatus(SaleStatus.valueOf(parts[6])); // Đọc Enum từ chuỗi CSV
-        this.setCreatedAt(LocalDateTime.parse(parts[7]));
-        this.setUpdatedAt(LocalDateTime.parse(parts[8]));
+        
      
     }
 }

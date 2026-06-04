@@ -26,7 +26,7 @@ public class FlashSaleController {
     }
 
     // Chuc nang 3: Tao event moi
-    public void createNewEvent() {
+    public void createEvent() {
         System.out.println("\n--- TIEN HANH TAO SU KIEN FLASH SALE MOI ---");
         System.out.print("Nhap ID Event (vi du: E99): ");
         String id = scanner.nextLine().trim();
@@ -99,7 +99,8 @@ public class FlashSaleController {
         // CẬP NHẬT CHUẨN: Truyền thêm tham số thứ 8 là ActivationStatus.ACTIVE theo đúng thiết kế của Leader
         FlashSaleItem item = new FlashSaleItem(itemId, LocalDateTime.now(), LocalDateTime.now(),eventId, productId, flashPrice, limitedQty, 0, 1, SaleStatus.ACTIVE);
 
-        flashSaleItemRepository.save(item);
+        flashSaleItemRepository.update(item);
         System.out.println("[Thong bao]: Dua san pham vao Flash Sale thanh cong!");
     }
+
 }

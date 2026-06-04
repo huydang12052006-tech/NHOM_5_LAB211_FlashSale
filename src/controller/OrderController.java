@@ -22,7 +22,6 @@ import repository.CustomerRepository;
 import repository.FlashSaleItemRepository;
 import repository.OrderRepository;
 
-import java.io.IOException;
 
 public class OrderController {
 

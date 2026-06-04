@@ -65,7 +65,7 @@ public class ProductView {
     // Input Product Data
     // ==================================
 
-    public Product inputProduct() {
+    public Product inputProductData() {
 
         System.out.print("ID: ");
         String id = scanner.nextLine();
@@ -128,9 +128,5 @@ public class ProductView {
         return scanner.nextLine();
     }
 
-    public void showMessage(
-            String message) {
 
-        System.out.println(message);
-    }
 }

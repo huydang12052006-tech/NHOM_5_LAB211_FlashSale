@@ -1,25 +1,42 @@
 package repository;
 
-import model.entity.FlashSaleItem;
+import model.Entity.FlashSaleItem;
 
 import java.io.*;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.nio.file.*;
-import java.util.ArrayList;
+
 import java.util.List;
 
-public class FlashSaleItemRepository {
+public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
     
     private static final String FILE_PATH = "data/flash_items.csv";
     private static final int MAX_RETRY = 3;
 
+    public FlashSaleItemRepository() {
+        super("data/flash_items.csv");
+    }
+    // --- Quản lý Item ---
+
+    @Override
+    protected FlashSaleItem mapFromCsv(String csvLine) {
+
+        FlashSaleItem item = new FlashSaleItem();
+
+        try {
+            item.fromCsvLine(csvLine);
+            return item;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public boolean sellWithNoLock(String flashItemId,
             int quantity) throws IOException {
 
-        List<FlashSaleItem> items = readAll();
+        List<FlashSaleItem> items = findAll();
 
-        FlashSaleItem item = findById(items, flashItemId);
+        FlashSaleItem item = findById( flashItemId);
 
         if (item == null) {
             return false;
@@ -50,7 +67,7 @@ public class FlashSaleItemRepository {
 
             item.setSoldQty(item.getSoldQty() + quantity);
 
-            writeAll(items);
+            rewriteFile(items);
 
             return true;
         }
@@ -62,9 +79,9 @@ public class FlashSaleItemRepository {
             int quantity)
             throws IOException {
 
-        List<FlashSaleItem> items = readAll();
+        List<FlashSaleItem> items = findAll();
 
-        FlashSaleItem item = findById(items, flashItemId);
+        FlashSaleItem item = findById( flashItemId);
 
         if (item == null) {
             return false;
@@ -81,7 +98,7 @@ public class FlashSaleItemRepository {
 
         item.setSoldQty(item.getSoldQty() + quantity);
 
-        writeAll(items);
+        rewriteFile(items);
 
         return true;
     }
@@ -89,8 +106,6 @@ public class FlashSaleItemRepository {
     public boolean sellWithFileLock(String flashItemId,
             int quantity)
             throws IOException {
-
-        Path path = Paths.get(FILE_PATH);
 
         /*
         FileLock khóa trực tiếp file CSV
@@ -101,9 +116,9 @@ public class FlashSaleItemRepository {
                 = new RandomAccessFile(FILE_PATH, "rw"); FileChannel channel = raf.getChannel(); 
                 FileLock lock = channel.lock()) {
 
-            List<FlashSaleItem> items = readAll();
+            List<FlashSaleItem> items = findAll();
 
-            FlashSaleItem item = findById(items, flashItemId);
+            FlashSaleItem item = findById( flashItemId);
 
             if (item == null) {
                 return false;
@@ -115,7 +130,7 @@ public class FlashSaleItemRepository {
 
             item.setSoldQty(item.getSoldQty() + quantity);
 
-            writeAll(items);
+            rewriteFile(items);
 
             return true;
         }
@@ -129,9 +144,8 @@ public class FlashSaleItemRepository {
 
         while (retry < MAX_RETRY) {
 
-            List<FlashSaleItem> items = readAll();
 
-            FlashSaleItem item = findById(items, flashItemId);
+            FlashSaleItem item = findById( flashItemId);
 
             if (item == null) {
                 return false;
@@ -160,10 +174,10 @@ public class FlashSaleItemRepository {
             /*
             RE-READ latest data
              */
-            List<FlashSaleItem> latestItems = readAll();
+            List<FlashSaleItem> latestItems = findAll();
 
             FlashSaleItem latestItem
-                    = findById(latestItems, flashItemId);
+                    = findById(  flashItemId);
 
             /*
             version changed
@@ -194,7 +208,7 @@ public class FlashSaleItemRepository {
                     latestItem.getVersion() + 1
             );
 
-            writeAll(latestItems);
+            rewriteFile(latestItems);
 
             return true;
         }

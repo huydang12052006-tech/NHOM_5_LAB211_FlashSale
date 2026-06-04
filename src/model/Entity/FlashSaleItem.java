@@ -101,14 +101,15 @@ public class FlashSaleItem extends BaseEntity {
     public void fromCsvLine(String csvLine) {
         String[] parts = csvLine.split(",");
         this.setId(parts[0]);
-        this.setEventId(parts[1]);
-        this.setProductId(parts[2]);
-        this.setFlashPrice(Double.parseDouble(parts[3]));
-        this.setLimitedQty(Integer.parseInt(parts[4]));
-        this.setSoldQty(Integer.parseInt(parts[5]));
-        this.setVersion(Integer.parseInt(parts[6]));
-        this.setStatus(SaleStatus.valueOf(parts[7]));
-        this.setCreatedAt(LocalDateTime.parse(parts[8]));
-        this.setUpdatedAt(LocalDateTime.parse(parts[9]));
+        this.setCreatedAt(LocalDateTime.parse(parts[1]));
+        this.setUpdatedAt(LocalDateTime.parse(parts[2]));
+        this.setEventId(parts[3]);
+        this.setProductId(parts[4]);
+        this.setFlashPrice(Double.parseDouble(parts[5]));
+        this.setLimitedQty(Integer.parseInt(parts[6]));
+        this.setSoldQty(Integer.parseInt(parts[7]));
+        this.setVersion(Integer.parseInt(parts[8]));
+        this.setStatus(SaleStatus.valueOf(parts[9]));
+        
     }
 }

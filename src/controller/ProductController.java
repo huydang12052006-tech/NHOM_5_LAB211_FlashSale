@@ -13,7 +13,7 @@ public class ProductController {
         this.productRepository = productRepository;
     }
 
-    public boolean createNewProduct(Product newProduct) {
+    public boolean createProduct(Product newProduct) {
 
         boolean idExists =
                 productRepository.findAll()
@@ -35,7 +35,7 @@ public class ProductController {
         return true;
     }
 
-    public boolean removeProduct(String id) {
+    public boolean deleteProduct(String id) {
 
         Product targetProduct = null;
 

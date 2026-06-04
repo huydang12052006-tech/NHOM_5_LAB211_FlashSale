@@ -1,13 +1,69 @@
 package view;
 
-import java.util.Scanner;
 import model.Entity.Product;
 import model.Enum.SaleStatus;
+
+import java.util.List;
+import java.util.Scanner;
 
 public class ProductView {
 
     private final Scanner scanner =
             new Scanner(System.in);
+
+    // ==================================
+    // Display Products
+    // ==================================
+
+    public void displayProducts(
+            List<Product> products) {
+
+        System.out.println(
+                "\n===== PRODUCT LIST ====="
+        );
+
+        if (products == null
+                || products.isEmpty()) {
+
+            System.out.println(
+                    "No products found."
+            );
+
+            return;
+        }
+
+        for (Product product : products) {
+
+            System.out.println(product);
+        }
+    }
+
+    // ==================================
+    // Display Product Detail
+    // ==================================
+
+    public void displayProductDetail(
+            Product product) {
+
+        if (product == null) {
+
+            System.out.println(
+                    "Product not found."
+            );
+
+            return;
+        }
+
+        System.out.println(
+                "\n===== PRODUCT DETAIL ====="
+        );
+
+        System.out.println(product.toString());
+    }
+
+    // ==================================
+    // Input Product Data
+    // ==================================
 
     public Product inputProduct() {
 
@@ -44,6 +100,24 @@ public class ProductView {
                 SaleStatus.ACTIVE
         );
     }
+
+    // ==================================
+    // Input Category
+    // ==================================
+
+    public String inputCategory() {
+
+        System.out.print(
+                "Enter category: "
+        );
+
+        return scanner.nextLine()
+                .trim();
+    }
+
+    // ==================================
+    // Message
+    // ==================================
 
     public String inputProductId() {
 

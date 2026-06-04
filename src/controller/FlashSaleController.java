@@ -5,6 +5,7 @@ import  model.Entity.FlashSaleEvent;
 import  model.Entity.FlashSaleItem;
 import  model.Entity.Product;
 import  repository.FlashSaleRepository;
+import  repository.FlashSaleItemRepository;
 import  repository.ProductRepository;
 
 import java.time.LocalDateTime;
@@ -13,11 +14,13 @@ import java.util.Scanner;
 public class FlashSaleController {
 
     private final FlashSaleRepository flashSaleRepository;
+    private final FlashSaleItemRepository flashSaleItemRepository;
     private final ProductRepository productRepository;
     private final Scanner scanner;
 
-    public FlashSaleController(FlashSaleRepository flashSaleRepository, ProductRepository productRepository) {
+    public FlashSaleController(FlashSaleRepository flashSaleRepository, FlashSaleItemRepository flashSaleItemRepository, ProductRepository productRepository) {
         this.flashSaleRepository = flashSaleRepository;
+        this.flashSaleItemRepository = flashSaleItemRepository;
         this.productRepository = productRepository;
         this.scanner = new Scanner(System.in);
     }
@@ -34,8 +37,8 @@ public class FlashSaleController {
         LocalDateTime start = LocalDateTime.now();
         LocalDateTime end = start.plusHours(2);
 
-        FlashSaleEvent newEvent = new FlashSaleEvent(id, name, start, end, "ACTIVE");
-        flashSaleRepository.saveEvent(newEvent);
+        FlashSaleEvent newEvent = new FlashSaleEvent(id, LocalDateTime.now(), LocalDateTime.now(),name, start, end, SaleStatus.ACTIVE);
+        flashSaleRepository.save(newEvent);
         System.out.println("[Thong bao]: Tao su kien Flash Sale moi thanh cong!");
     }
 
@@ -47,7 +50,7 @@ public class FlashSaleController {
 
         // 1. Kiem tra su kien ton tai
         boolean eventExists = false;
-        for (FlashSaleEvent e : flashSaleRepository.findAllEvents()) {
+        for (FlashSaleEvent e : flashSaleRepository.findAll()) {
             if (e.getId().equalsIgnoreCase(eventId)) {
                 eventExists = true;
                 break;
@@ -94,9 +97,9 @@ public class FlashSaleController {
         String itemId = "ITEM" + (System.currentTimeMillis() % 10000);
 
         // CẬP NHẬT CHUẨN: Truyền thêm tham số thứ 8 là ActivationStatus.ACTIVE theo đúng thiết kế của Leader
-        FlashSaleItem item = new FlashSaleItem(itemId, eventId, productId, flashPrice, limitedQty, 0, 1, ActivationStatus.ACTIVE);
+        FlashSaleItem item = new FlashSaleItem(itemId, LocalDateTime.now(), LocalDateTime.now(),eventId, productId, flashPrice, limitedQty, 0, 1, SaleStatus.ACTIVE);
 
-        flashSaleRepository.saveItem(item);
+        flashSaleItemRepository.save(item);
         System.out.println("[Thong bao]: Dua san pham vao Flash Sale thanh cong!");
     }
 }

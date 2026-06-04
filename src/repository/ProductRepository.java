@@ -2,7 +2,6 @@ package repository;
 
 import model.Entity.Product;
 
-import java.util.List;
 
 public class ProductRepository extends CsvRepository<Product> {
 

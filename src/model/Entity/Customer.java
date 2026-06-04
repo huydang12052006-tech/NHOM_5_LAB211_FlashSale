@@ -25,7 +25,7 @@ public class Customer extends BaseEntity {
     // Constructors
     // =========================
     public Customer(){
-        
+
     }
 
     public Customer(String id,
@@ -128,27 +128,27 @@ public class Customer extends BaseEntity {
         setId(parts[0]);
 
         setCreatedAt(
-                parseDateTime(parts[7])
+                parseDateTime(parts[1])
         );
 
         setUpdatedAt(
-                parseDateTime(parts[8])
+                parseDateTime(parts[2])
         );
 
-        this.fullName = parts[1];
+        this.fullName = parts[3];
 
-        this.phone = parts[2];
+        this.phone = parts[4];
 
-        this.email = parts[3];
+        this.email = parts[5];
 
         this.tier =
-                CustomerTier.valueOf(parts[4]);
+                CustomerTier.valueOf(parts[6]);
 
         this.totalSpent =
-                Double.parseDouble(parts[5]);
+                Double.parseDouble(parts[7]);
 
         this.active =
-                Boolean.parseBoolean(parts[6]);
+                Boolean.parseBoolean(parts[8]);
     }
 
     // =========================

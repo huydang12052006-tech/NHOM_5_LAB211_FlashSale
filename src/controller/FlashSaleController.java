@@ -1,11 +1,11 @@
-package com.mycompany.flashsale.simulation.controller;
+package controller;
 
-import com.mycompany.flashsale.simulation.model.ActivationStatus;
-import com.mycompany.flashsale.simulation.model.FlashSaleEvent;
-import com.mycompany.flashsale.simulation.model.FlashSaleItem;
-import com.mycompany.flashsale.simulation.model.Product;
-import com.mycompany.flashsale.simulation.repository.FlashSaleRepository;
-import com.mycompany.flashsale.simulation.repository.ProductRepository;
+import  model.Enum.SaleStatus;
+import  model.Entity.FlashSaleEvent;
+import  model.Entity.FlashSaleItem;
+import  model.Entity.Product;
+import  repository.FlashSaleRepository;
+import  repository.ProductRepository;
 
 import java.time.LocalDateTime;
 import java.util.Scanner;
@@ -67,7 +67,7 @@ public class FlashSaleController {
         for (Product p : productRepository.findAll()) {
             if (p.getId().equalsIgnoreCase(productId)) {
                 // Kiểm tra xem sản phẩm có bị xóa mềm (DELETED) hoặc ngưng hoạt động (INACTIVE) chưa
-                if (p.getStatus() == ActivationStatus.ACTIVE) {
+                if (p.getStatus() == SaleStatus.ACTIVE) {
                     product = p;
                 }
                 break;

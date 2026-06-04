@@ -1,7 +1,7 @@
-package com.mycompany.flashsale.simulation.repository;
+package repository;
 
-import com.mycompany.flashsale.simulation.model.FlashSaleEvent;
-import com.mycompany.flashsale.simulation.model.FlashSaleItem;
+import model.Entity.FlashSaleEvent;
+import model.Entity.FlashSaleItem;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;

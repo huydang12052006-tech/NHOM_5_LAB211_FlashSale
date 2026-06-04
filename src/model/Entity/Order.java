@@ -2,19 +2,19 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package model.entity;
+package model.Entity;
 
 import model.BaseEntity.BaseEntity;
-import model.enums.LockMechanism;
-import model.enums.OrderStatus;
+import model.Enum.LockMechanism;
+import model.Enum.OrderStatus;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+// import java.time.format.DateTimeFormatter;
 
 public class Order extends BaseEntity {
 
-    private static final DateTimeFormatter FORMATTER
-            = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    // private static final DateTimeFormatter FORMATTER
+    //         = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private String customerId;
     private String eventId;

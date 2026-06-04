@@ -1,9 +1,9 @@
-package com.mycompany.flashsale.simulation.controller;
+package controller;
 
-import com.mycompany.flashsale.simulation.model.ActivationStatus;
-import com.mycompany.flashsale.simulation.model.Product;
-import com.mycompany.flashsale.simulation.repository.ProductRepository;
 import java.time.LocalDateTime;
+import model.BaseEntity.BaseEntity;
+import model.Enum.SaleStatus;
+import repository.ProductRepository;  
 import java.util.Scanner;
 
 public class ProductController {

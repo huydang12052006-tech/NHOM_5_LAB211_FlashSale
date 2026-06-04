@@ -1,0 +1,199 @@
+package repository;
+
+import model.entity.BaseEntity;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+public abstract class CsvRepository<T extends BaseEntity> {
+
+    protected final String filePath;
+
+    /*
+        basic thread-safe
+        mọi CRUD đều đi qua lock này
+     */
+    protected final Object lock = new Object();
+
+    protected CsvRepository(String filePath) {
+        this.filePath = filePath;
+    }
+
+    // =====================================================
+    // ABSTRACT METHODS
+    // =====================================================
+
+    protected abstract T mapFromCsv(String csvLine);
+
+    // =====================================================
+    // FIND ALL
+    // =====================================================
+
+    public List<T> findAll() throws IOException {
+
+        synchronized (lock) {
+
+            List<T> result = new ArrayList<>();
+
+            Path path = Path.of(filePath);
+
+            if (!Files.exists(path)) {
+                return result;
+            }
+
+            try (BufferedReader reader =
+                         new BufferedReader(
+                                 new FileReader(filePath))) {
+
+                String line;
+
+                while ((line = reader.readLine()) != null) {
+
+                    if (!line.isBlank()) {
+
+                        result.add(
+                                mapFromCsv(line)
+                        );
+                    }
+                }
+            }
+
+            return result;
+        }
+    }
+
+    // =====================================================
+    // FIND BY ID
+    // =====================================================
+
+    public T findById(String id) throws IOException {
+
+        List<T> entities = findAll();
+
+        for (T entity : entities) {
+
+            if (entity.getId().equals(id)) {
+                return entity;
+            }
+        }
+
+        return null;
+    }
+
+    // =====================================================
+    // SAVE
+    // =====================================================
+
+    public void save(T entity) throws IOException {
+
+        synchronized (lock) {
+
+            try (BufferedWriter writer =
+                         new BufferedWriter(
+                                 new FileWriter(
+                                         filePath,
+                                         true
+                                 ))) {
+
+                writer.write(
+                        entity.toCsvLine()
+                );
+
+                writer.newLine();
+            }
+        }
+    }
+
+    // =====================================================
+    // UPDATE
+    // =====================================================
+
+    public boolean update(T updatedEntity)
+            throws IOException {
+
+        synchronized (lock) {
+
+            List<T> entities = findAll();
+
+            boolean found = false;
+
+            for (int i = 0; i < entities.size(); i++) {
+
+                if (entities.get(i)
+                        .getId()
+                        .equals(updatedEntity.getId())) {
+
+                    entities.set(i, updatedEntity);
+
+                    found = true;
+
+                    break;
+                }
+            }
+
+            if (!found) {
+                return false;
+            }
+
+            rewriteFile(entities);
+
+            return true;
+        }
+    }
+
+    // =====================================================
+    // DELETE
+    // =====================================================
+
+    public boolean delete(String id)
+            throws IOException {
+
+        synchronized (lock) {
+
+            List<T> entities = findAll();
+
+            boolean removed =
+                    entities.removeIf(
+                            entity ->
+                                    entity.getId()
+                                            .equals(id)
+                    );
+
+            if (!removed) {
+                return false;
+            }
+
+            rewriteFile(entities);
+
+            return true;
+        }
+    }
+
+    // =====================================================
+    // REWRITE CSV
+    // =====================================================
+
+    protected void rewriteFile(List<T> entities)
+            throws IOException {
+
+        try (BufferedWriter writer =
+                     new BufferedWriter(
+                             new FileWriter(
+                                     filePath,
+                                     false
+                             ))) {
+
+            for (T entity : entities) {
+
+                writer.write(
+                        entity.toCsvLine()
+                );
+
+                writer.newLine();
+            }
+        }
+    }
+}

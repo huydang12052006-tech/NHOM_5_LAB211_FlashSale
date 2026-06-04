@@ -113,20 +113,22 @@ public void fromCsvLine(String csv) {
 
     setId(parts[0]);
 
-    this.customerId = parts[1];
+    super.setCreatedAt(parseDateTime(parts[2]));
 
-    this.eventId = parts[2];
+    super.setUpdatedAt(parseDateTime(parts[3]));
 
-    this.totalAmount = Double.parseDouble(parts[3]);
+    this.customerId = parts[4];
 
-    this.status = OrderStatus.valueOf(parts[4]);
+    this.eventId = parts[5];
+
+    this.totalAmount = Double.parseDouble(parts[6]);
+
+    this.status = OrderStatus.valueOf(parts[7]);
 
     this.lockMechanism =
-            LockMechanism.valueOf(parts[5]);
+            LockMechanism.valueOf(parts[8]);
 
-    super.setCreatedAt(parseDateTime(parts[6]));
-
-    super.setUpdatedAt(parseDateTime(parts[7]));
+    
 }
 
 @Override

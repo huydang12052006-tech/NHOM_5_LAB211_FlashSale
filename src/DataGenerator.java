@@ -2,7 +2,6 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
  */
-package lab211;
 
 import java.util.Random;
 import java.io.BufferedWriter;
@@ -17,7 +16,7 @@ public class DataGenerator {
     private static final Random random = new Random();
 
     private static final DateTimeFormatter formatter =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     private static final String[] FIRST_NAMES = {
             "Nguyen", "Tran", "Le", "Pham", "Hoang",
@@ -138,7 +137,7 @@ public class DataGenerator {
         BufferedWriter bw =
                 new BufferedWriter(new FileWriter("data/products.csv"));
 
-        bw.write("id,createdAt,updatedAt,name,category,originalPrice,stockQty,version,active");
+        bw.write("id,createdAt,updatedAt,name,category,originalPrice,stockQty,version,status");
         bw.newLine();
 
         for (int i = 1; i <= count; i++) {
@@ -169,7 +168,8 @@ public class DataGenerator {
 
             int version = random.nextInt(20);
 
-            boolean active = random.nextBoolean();
+            String status =
+                    SALE_STATUS[random.nextInt(SALE_STATUS.length)];
 
             bw.write(String.join(",",
                     id,
@@ -177,10 +177,10 @@ public class DataGenerator {
                     updatedAt,
                     fullProductName,
                     category,
-                    String.format("%.2f", price),
+                    String.valueOf((long) price),
                     String.valueOf(stockQty),
                     String.valueOf(version),
-                    String.valueOf(active)
+                    status
             ));
 
             bw.newLine();
@@ -247,7 +247,7 @@ public class DataGenerator {
         BufferedWriter bw =
                 new BufferedWriter(new FileWriter("data/flash_items.csv"));
 
-        bw.write("id,createdAt,updatedAt,eventId,productId,flashPrice,limitedQty,soldQty,discountPercent,version,status");
+        bw.write("id,createdAt,updatedAt,eventId,productId,flashPrice,limitedQty,soldQty,version,status");
         bw.newLine();
 
         for (int i = 1; i <= count; i++) {
@@ -271,9 +271,6 @@ public class DataGenerator {
             int soldQty =
                     random.nextInt(limitedQty + 1);
 
-            double discount =
-                    10 + random.nextInt(70);
-
             double flashPrice =
                     100000 + random.nextInt(30000000);
 
@@ -289,10 +286,9 @@ public class DataGenerator {
                     updatedAt,
                     eventId,
                     productId,
-                    String.format("%.2f", flashPrice),
+                    String.valueOf((long) flashPrice),
                     String.valueOf(limitedQty),
                     String.valueOf(soldQty),
-                    String.format("%.2f", discount),
                     String.valueOf(version),
                     status
             ));
@@ -348,7 +344,7 @@ public class DataGenerator {
                     phone,
                     email,
                     tier,
-                    String.format("%.2f", totalSpent),
+                    String.valueOf((long) totalSpent),
                     String.valueOf(active)
             ));
 
@@ -401,7 +397,7 @@ public class DataGenerator {
                     updatedAt,
                     customerId,
                     eventId,
-                    String.format("%.2f", totalAmount),
+                    String.valueOf((long) totalAmount),
                     status,
                     lock
             ));
@@ -456,8 +452,8 @@ public class DataGenerator {
                     orderId,
                     flashItemId,
                     String.valueOf(quantity),
-                    String.format("%.2f", unitPrice),
-                    String.format("%.2f", subTotal)
+                    String.valueOf((long) unitPrice),
+                    String.valueOf((long) subTotal)
             ));
 
             bw.newLine();

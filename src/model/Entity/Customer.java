@@ -128,11 +128,11 @@ public class Customer extends BaseEntity {
         setId(parts[0]);
 
         setCreatedAt(
-                parseDateTime(parts[1])
+                LocalDateTime.parse(parts[1])
         );
 
         setUpdatedAt(
-                parseDateTime(parts[2])
+                LocalDateTime.parse(parts[2])
         );
 
         this.fullName = parts[3];

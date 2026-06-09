@@ -54,10 +54,15 @@ public abstract class CsvRepository<T extends BaseEntity> {
                 while ((line = reader.readLine()) != null) {
 
                     if (line != null && !line.trim().isEmpty()) {
+                        if (line.startsWith("id,")) {
+                            continue;
+                        }
 
-                        result.add(
-                                mapFromCsv(line)
-                        );
+                        T entity = mapFromCsv(line);
+
+                        if (entity != null) {
+                            result.add(entity);
+                        }
                     }
                 }
             } catch (IOException e) {

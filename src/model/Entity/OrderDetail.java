@@ -109,22 +109,22 @@ public class OrderDetail extends BaseEntity {
 
         setId(parts[0]);
         setCreatedAt(
-                parseDateTime(parts[2])
+                LocalDateTime.parse(parts[1])
         );
 
         setUpdatedAt(
-                parseDateTime(parts[3])
+                LocalDateTime.parse(parts[2])
         );
 
-        this.orderId = parts[4];
+        this.orderId = parts[3];
 
-        this.flashItemId = parts[5];
+        this.flashItemId = parts[4];
 
-        this.quantity = Integer.parseInt(parts[6]);
+        this.quantity = Integer.parseInt(parts[5]);
 
-        this.unitPrice = Double.parseDouble(parts[7]);
+        this.unitPrice = Double.parseDouble(parts[6]);
 
-        this.subTotal = Double.parseDouble(parts[8]);
+        this.subTotal = Double.parseDouble(parts[7]);
 
         
     }

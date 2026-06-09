@@ -33,9 +33,9 @@ direction LR
 	        +setStockQty(stockQty: int) void
 	        +getVersion() int
 	        +setVersion(version: int) void
-	        +isActive() boolean
-	        +setActive(active: boolean) void
-        }
+	        +getStatus() SaleStatus
+	        +setStatus(status: SaleStatus) void
+                }
 
         class FlashSaleEvent {
 	        -eventName: String
@@ -200,34 +200,34 @@ namespace ENUM {
         }
 
         class CustomerTier {
-	        +NORMAL: CustomerTier
-	        +VIP: CustomerTier
-	        +PREMIUM: CustomerTier
+	        +NORMA
+	        +VIP
+	        +PREMIUM
         }
 
         class UserRole {
-	        +CUSTOMER: UserRole
-	        +SELLER: UserRole
-	        +ADMIN: UserRole
+	        +CUSTOMER
+	        +SELLER
+	        +ADMIN
         }
 
         class OrderStatus {
-	        +PENDING: OrderStatus
-	        +SUCCESS: OrderStatus
-	        +FAILED: OrderStatus
-	        +CANCELLED: OrderStatus
+	        +PENDING
+	        +SUCCESS
+	        +FAILED
+	        +CANCELLED
         }
 
         class LockMechanism {
-	        +NO_LOCK: LockMechanism
-	        +SYNCHRONIZED: LockMechanism
-	        +FILE_LOCK: LockMechanism
-	        +OPTIMISTIC_LOCK: LockMechanism
+	        +NO_LOCK
+	        +SYNCHRONIZED
+	        +FILE_LOCK
+	        +OPTIMISTIC_LOCK
         }
 
         class PaymentMethod {
-	        +CASH: PaymentMethod
-	        +BANKING: PaymentMethod
+	        +CASH
+	        +BANKING
         }
 
 	}
@@ -235,61 +235,54 @@ namespace ENUM {
 	namespace REPOSITORY {
         class CsvRepository {
 	        -filePath: String
+			+mapFromCsv( csvLine: String) T
 	        +findAll() List~T~
 	        +findById(id: String) T
 	        +save(entity: T) void
 	        +update(entity: T) void
 	        +delete(id: String) void
+			+rewriteFile(entities: List<T> ) void
         }
 
         class UserRepository {
-	        +findAll() List~User~
-	        +findById(id: String) User
+	        +mapFromCsv( csvLine: String) User
 	        +existsByUsername(username: String) boolean
 	        +login(username: String,password: String) User
-	        +register(user: User) void
 	        +changePassword(userId: String,newPassword: String) void
         }
 
 		class CustomerRepository {
-	        +findAll() List~Customer~
-	        +findById(id: String) Customer
-	        +save(entity: ) void
-	        +update(customer: Customer) void
-	        +delete(id: String) void
-			        }
+	        +mapFromCsv( csvLine: String) Customer			        }
 
         class FlashSaleItemRepository {
-	        +sellWithNoLock(String flashItemId,int quantity) boolean
-	        +sellWithSynchronized(String flashItemId,int quantity) boolean
-	        +sellWithFileLock(String flashItemId,int quantity) boolean
-	        +sellWithOptimisticLock(String flashItemId,int quantity) boolean
+			+mapFromCsv( csvLine: String) FlashSaleItem
+	        +sellWithNoLock( flashItemId:String, quantity:int) boolean
+	        +sellWithSynchronized( flashItemId:String, quantity:int) boolean
+	        +sellWithFileLock( flashItemId:String, quantity:int) boolean
+	        +sellWithOptimisticLock( flashItemId:String, quantity:int) boolean
         }
 
         class FlashSaleRepository {
-	        +findById(id: String) FlashSaleEvent
-	        +findAll() List~FlashSaleEvent~
-	        +save(item: FlashSaleItem) void
-	        +update(item: FlashSaleItem) void
-	        +delete(id: String) void
+	        +mapFromCsv( csvLine: String) FlashSaleFlashSaleEvent
         }
 
         class OrderRepository {
-	        +save(order: Order) void
-	        +findById(id: String) Order
-	        +findAll(id: String) List~Order~
-	        +delete(id: String) void
-	        +findOrdersByCustomer(customerId: String) List~Order~
-	        +update(id: String,status: OrderStatus) void
-        }
+	        +mapFromCsv( csvLine: String) Order 
+			+getPurchasedQuantity(customerId:String ,flashItemId:String ) int
+			}
+		
+		class OrderDetailRepository {
+	        +mapFromCsv( csvLine: String) OrderDetail 
+			}
 
         class ProductRepository {
-	        +save(product: Product) void
-	        +update(product: Product) void
-	        +delete(id: String) void
-	        +findById(id: String) Product
-	        +findAll() List~Product~
-	        +findByCategory(category: String) List~Product~
+	        +mapFromCsv( csvLine: String) Product
+
+        }
+
+		class PaymentRepository {
+	        +mapFromCsv( csvLine: String) Payment
+
         }
 
 	}
@@ -299,7 +292,6 @@ namespace ENUM {
 	        -orderRepository: OrderRepository
 	        -orderView: OrderView
 	        +placeOrder() void
-	        +cancelOrder() void
         }
 
         class AuthController {
@@ -337,7 +329,7 @@ namespace ENUM {
         class FlashSaleController {
     -flashSaleRepository: FlashSaleRepository
     -productRepository: ProductRepository
-    +createFlashSaleEvent() void
+    +createEvent() void
     +addProductToEvent() void
     +deleteFlashSaleEvent() void
 }
@@ -377,6 +369,7 @@ namespace ENUM {
 	        +displayProductDetail() void
 	        +inputProductData() Product
 	        +inputCategory() String
+			+inputinputId() String
         }
 
         class SimulatorView {
@@ -412,4 +405,7 @@ namespace ENUM {
     CsvRepository <|-- FlashSaleRepository
     CsvRepository <|-- FlashSaleItemRepository
     CsvRepository <|-- UserRepository
-    CsvRepository <|-- 	CustomerRepository
+    CsvRepository <|-- CustomerRepository
+	CsvRepository <|--PaymentRepository
+	CsvRepository <|--OrderDetailRepository
+

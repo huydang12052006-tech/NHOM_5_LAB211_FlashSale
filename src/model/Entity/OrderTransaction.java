@@ -121,15 +121,15 @@ public class OrderTransaction extends BaseEntity {
 
         return String.join(",",
                 escapeCsv(getId()),
+                formatDateTime(getCreatedAt()),
+                formatDateTime(getUpdatedAt()),                
                 escapeCsv(orderId),
                 escapeCsv(threadName),
                 mechanism.name(),
                 String.valueOf(success),
                 String.valueOf(retryCount),
                 String.valueOf(executionTimeMs),
-                escapeCsv(message),
-                formatDateTime(getCreatedAt()),
-                formatDateTime(getUpdatedAt())
+                escapeCsv(message)
         );
     }
 
@@ -139,6 +139,14 @@ public class OrderTransaction extends BaseEntity {
         String[] parts = csv.split(",", -1);
 
         setId(parts[0]);
+
+        setCreatedAt(
+                LocalDateTime.parse(parts[1])
+        );
+
+        setUpdatedAt(
+                LocalDateTime.parse(parts[2])
+        );
 
         this.orderId = parts[3];
 
@@ -158,13 +166,6 @@ public class OrderTransaction extends BaseEntity {
 
         this.message = parts[9];
 
-        setCreatedAt(
-                parseDateTime(parts[1])
-        );
-
-        setUpdatedAt(
-                parseDateTime(parts[2])
-        );
     }
 
     @Override

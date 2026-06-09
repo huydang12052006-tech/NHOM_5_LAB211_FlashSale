@@ -10,486 +10,912 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class DataGenerator {
 
-    private static final Random random = new Random();
+        private static final Random random = new Random();
 
-    private static final DateTimeFormatter formatter =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
-    private static final String[] FIRST_NAMES = {
-            "Nguyen", "Tran", "Le", "Pham", "Hoang",
-            "Vo", "Dang", "Bui", "Do", "Huynh"
-    };
+        private static final String[] FIRST_NAMES = {
+                        "Nguyen", "Tran", "Le", "Pham", "Hoang",
+                        "Vo", "Dang", "Bui", "Do", "Huynh"
+        };
 
-    private static final String[] MIDDLE_NAMES = {
-            "Van", "Thi", "Minh", "Ngoc", "Thanh",
-            "Duc", "Quoc", "Gia", "Bao", "Anh"
-    };
+        private static final String[] MIDDLE_NAMES = {
+                        "Van", "Thi", "Minh", "Ngoc", "Thanh",
+                        "Duc", "Quoc", "Gia", "Bao", "Anh"
+        };
 
-    private static final String[] LAST_NAMES = {
-            "An", "Binh", "Cuong", "Dung", "Giang",
-            "Hanh", "Khanh", "Linh", "Nam", "Phong",
-            "Quan", "Son", "Trang", "Vy", "Yen"
-    };
+        private static final String[] LAST_NAMES = {
+                        "An", "Binh", "Cuong", "Dung", "Giang",
+                        "Hanh", "Khanh", "Linh", "Nam", "Phong",
+                        "Quan", "Son", "Trang", "Vy", "Yen"
+        };
 
-    private static final String[] CATEGORIES = {
-            "Laptop",
-            "Smartphone",
-            "Tablet",
-            "Gaming",
-            "Fashion",
-            "HomeAppliance",
-            "Camera",
-            "Accessory",
-            "Audio",
-            "SmartWatch"
-    };
+        private static final String[] CATEGORIES = {
+                        "Laptop",
+                        "Smartphone",
+                        "Tablet",
+                        "Gaming",
+                        "Fashion",
+                        "HomeAppliance",
+                        "Camera",
+                        "Accessory",
+                        "Audio",
+                        "SmartWatch"
+        };
 
-    private static final String[][] PRODUCT_NAMES = {
+        private static final String[][] PRODUCT_NAMES = {
 
-            {"MacBook Air M2", "Dell XPS 15", "Asus ROG Zephyrus",
-                    "Lenovo ThinkPad X1", "HP Pavilion Gaming"},
+                        { "MacBook Air M2", "Dell XPS 15", "Asus ROG Zephyrus",
+                                        "Lenovo ThinkPad X1", "HP Pavilion Gaming" },
 
-            {"iPhone 15 Pro Max", "Samsung Galaxy S25",
-                    "Xiaomi 14 Ultra", "Oppo Find X7",
-                    "Google Pixel 9"},
+                        { "iPhone 15 Pro Max", "Samsung Galaxy S25",
+                                        "Xiaomi 14 Ultra", "Oppo Find X7",
+                                        "Google Pixel 9" },
 
-            {"iPad Air Gen 6", "Samsung Galaxy Tab S9",
-                    "Xiaomi Pad 7", "Huawei MatePad Pro",
-                    "Lenovo Tab Extreme"},
+                        { "iPad Air Gen 6", "Samsung Galaxy Tab S9",
+                                        "Xiaomi Pad 7", "Huawei MatePad Pro",
+                                        "Lenovo Tab Extreme" },
 
-            {"PlayStation 5", "Xbox Series X",
-                    "Nintendo Switch OLED", "MSI Gaming PC",
-                    "Razer Blade 16"},
+                        { "PlayStation 5", "Xbox Series X",
+                                        "Nintendo Switch OLED", "MSI Gaming PC",
+                                        "Razer Blade 16" },
 
-            {"Nike Air Force 1", "Adidas Ultraboost",
-                    "Uniqlo Hoodie", "Levis 501 Jeans",
-                    "Puma Running Shoes"},
+                        { "Nike Air Force 1", "Adidas Ultraboost",
+                                        "Uniqlo Hoodie", "Levis 501 Jeans",
+                                        "Puma Running Shoes" },
 
-            {"Dyson Vacuum V15", "Philips Air Fryer",
-                    "Panasonic Refrigerator", "LG Washing Machine",
-                    "Sharp Microwave Oven"},
+                        { "Dyson Vacuum V15", "Philips Air Fryer",
+                                        "Panasonic Refrigerator", "LG Washing Machine",
+                                        "Sharp Microwave Oven" },
 
-            {"Canon EOS R6", "Sony A7 IV",
-                    "Fujifilm XT5", "Nikon Z8",
-                    "GoPro Hero 13"},
+                        { "Canon EOS R6", "Sony A7 IV",
+                                        "Fujifilm XT5", "Nikon Z8",
+                                        "GoPro Hero 13" },
 
-            {"Logitech MX Master 3S", "Anker PowerBank 20000mAh",
-                    "UGreen USB-C Hub", "Baseus Charger 100W",
-                    "Apple Magic Mouse"},
+                        { "Logitech MX Master 3S", "Anker PowerBank 20000mAh",
+                                        "UGreen USB-C Hub", "Baseus Charger 100W",
+                                        "Apple Magic Mouse" },
 
-            {"Sony WH-1000XM6", "AirPods Pro 3",
-                    "JBL Charge 6", "Marshall Stanmore",
-                    "HyperX Cloud III"},
+                        { "Sony WH-1000XM6", "AirPods Pro 3",
+                                        "JBL Charge 6", "Marshall Stanmore",
+                                        "HyperX Cloud III" },
 
-            {"Apple Watch Ultra 3", "Samsung Galaxy Watch 8",
-                    "Garmin Forerunner 965", "Huawei Watch GT5",
-                    "Xiaomi Watch S4"}
-    };
+                        { "Apple Watch Ultra 3", "Samsung Galaxy Watch 8",
+                                        "Garmin Forerunner 965", "Huawei Watch GT5",
+                                        "Xiaomi Watch S4" }
+        };
 
-    private static final String[] SALE_STATUS = {
-            "UPCOMING", "ACTIVE", "ENDED", "DISABLED"
-    };
+        private static final String[] ORDER_STATUS = {
+                        "PENDING", "SUCCESS", "FAILED", "CANCELLED"
+        };
 
-    private static final String[] CUSTOMER_TIERS = {
-            "NORMAL", "VIP", "PREMIUM"
-    };
+        private static final String[] LOCKS = {
+                        "NO_LOCK",
+                        "SYNCHRONIZED",
+                        "FILE_LOCK",
+                        "OPTIMISTIC_LOCK"
+        };
 
-    private static final String[] ORDER_STATUS = {
-            "PENDING", "SUCCESS", "FAILED", "CANCELLED"
-    };
+        private static final String[] USER_ROLES = {
+                        "CUSTOMER", "SELLER", "ADMIN"
+        };
 
-    private static final String[] LOCKS = {
-            "NO_LOCK",
-            "SYNCHRONIZED",
-            "FILE_LOCK",
-            "OPTIMISTIC_LOCK"
-    };
+        private static final String[] PAYMENT_METHODS = {
+                        "CASH", "BANKING"
+        };
 
-    public static void main(String[] args) {
+        private static final String[] THREAD_NAMES = {
+                        "Thread-1", "Thread-2", "Thread-3", "Thread-4",
+                        "Thread-5", "Thread-6", "Thread-7", "Thread-8",
+                        "pool-1-thread-1", "pool-1-thread-2", "pool-1-thread-3",
+                        "pool-2-thread-1", "pool-2-thread-2", "pool-2-thread-3"
+        };
 
-        new File("data").mkdirs();
+        private static final String[] TX_MESSAGES_SUCCESS = {
+                        "Order placed successfully",
+                        "Transaction completed",
+                        "Payment confirmed",
+                        "Order processed successfully",
+                        "Flash sale item purchased"
+        };
 
-        try {
+        private static final String[] TX_MESSAGES_FAIL = {
+                        "Insufficient stock",
+                        "Optimistic lock conflict",
+                        "File lock timeout",
+                        "Concurrent modification detected",
+                        "Item sold out",
+                        "Transaction timeout"
+        };
 
-            generateProducts(5000);
-            generateFlashEvents(50);
-            generateFlashItems(1000);
-            generateCustomers(2500);
-            generateOrders(3000);
-            generateOrderDetails(3500);
+        // =========================================================
+        // Shared data structures for cross-referencing
+        // =========================================================
 
-            System.out.println("Generate CSV SUCCESS!");
+        // productId -> originalPrice
+        private static final Map<String, Double> productPriceMap = new HashMap<>();
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+        // eventId -> list of flashItemIds belonging to that event
+        private static final Map<String, List<String>> eventFlashItemsMap = new HashMap<>();
 
-    // =========================================================
-    // PRODUCTS
-    // =========================================================
+        // flashItemId -> flashPrice
+        private static final Map<String, Double> flashItemPriceMap = new HashMap<>();
 
-    private static void generateProducts(int count) throws IOException {
+        // flashItemId -> productId
+        private static final Map<String, String> flashItemProductMap = new HashMap<>();
 
-        BufferedWriter bw =
-                new BufferedWriter(new FileWriter("data/products.csv"));
+        // flashItemId -> soldQty (accumulated from OrderDetails)
+        private static final Map<String, Integer> flashItemSoldQtyMap = new HashMap<>();
 
-        bw.write("id,createdAt,updatedAt,name,category,originalPrice,stockQty,version,status");
-        bw.newLine();
+        // flashItemId -> limitedQty
+        private static final Map<String, Integer> flashItemLimitedQtyMap = new HashMap<>();
 
-        for (int i = 1; i <= count; i++) {
+        // orderId -> list of (flashItemId, quantity, unitPrice, subTotal)
+        private static final Map<String, List<double[]>> orderDetailsMap = new HashMap<>();
 
-            int categoryIndex = random.nextInt(CATEGORIES.length);
+        // orderId -> list of detail string-data for flashItemIds
+        private static final Map<String, List<String>> orderDetailFlashItemIds = new HashMap<>();
 
-            String category = CATEGORIES[categoryIndex];
+        // customerId -> totalSpent (sum of order totalAmounts for SUCCESS orders)
+        private static final Map<String, Double> customerSpentMap = new HashMap<>();
 
-            String productName =
-                    PRODUCT_NAMES[categoryIndex]
-                            [random.nextInt(PRODUCT_NAMES[categoryIndex].length)];
+        // orderId -> customerId
+        private static final Map<String, String> orderCustomerMap = new HashMap<>();
 
-            String fullProductName =
-                    productName + " " +
-                            (2023 + random.nextInt(4)) +
-                            " Edition";
+        // orderId -> eventId
+        private static final Map<String, String> orderEventMap = new HashMap<>();
 
-            String id = "P" + String.format("%05d", i);
+        // orderId -> totalAmount
+        private static final Map<String, Double> orderTotalMap = new HashMap<>();
 
-            String createdAt = randomDate();
-            String updatedAt = randomDate();
+        // orderId -> status
+        private static final Map<String, String> orderStatusMap = new HashMap<>();
 
-            double price =
-                    500000 + random.nextInt(50000000);
+        // orderId -> lockMechanism
+        private static final Map<String, String> orderLockMap = new HashMap<>();
 
-            int stockQty =
-                    100 + random.nextInt(5000);
+        // Store event start/end times for reference
+        private static final Map<String, LocalDateTime> eventStartMap = new HashMap<>();
+        private static final Map<String, LocalDateTime> eventEndMap = new HashMap<>();
 
-            int version = random.nextInt(20);
+        // =========================================================
 
-            String status =
-                    SALE_STATUS[random.nextInt(SALE_STATUS.length)];
+        private static final int NUM_PRODUCTS = 5000;
+        private static final int NUM_EVENTS = 50;
+        private static final int NUM_FLASH_ITEMS = 1000;
+        private static final int NUM_CUSTOMERS = 2500;
+        private static final int NUM_ORDERS = 3000;
+        private static final int NUM_USERS = 200;
 
-            bw.write(String.join(",",
-                    id,
-                    createdAt,
-                    updatedAt,
-                    fullProductName,
-                    category,
-                    String.valueOf((long) price),
-                    String.valueOf(stockQty),
-                    String.valueOf(version),
-                    status
-            ));
+        public static void main(String[] args) {
 
-            bw.newLine();
-        }
+                new File("data").mkdirs();
 
-        bw.close();
-    }
+                try {
 
-    // =========================================================
-    // FLASH EVENTS
-    // =========================================================
+                        // Phase 1: Generate independent entities
+                        generateProducts(NUM_PRODUCTS);
+                        generateFlashEvents(NUM_EVENTS);
 
-    private static void generateFlashEvents(int count)
-            throws IOException {
+                        // Phase 2: Generate FlashItems linked to real Products & Events
+                        generateFlashItems(NUM_FLASH_ITEMS);
 
-        BufferedWriter bw =
-                new BufferedWriter(new FileWriter("data/flash_events.csv"));
+                        // Phase 3: Generate Customers (initially without totalSpent)
+                        generateCustomersPhase1(NUM_CUSTOMERS);
 
-        bw.write("id,createdAt,updatedAt,eventName,startTime,endTime,status");
-        bw.newLine();
+                        // Phase 4: Generate Orders + OrderDetails together (consistent)
+                        generateOrdersAndDetails(NUM_ORDERS);
 
-        for (int i = 1; i <= count; i++) {
+                        // Phase 5: Update FlashItems CSV with correct soldQty
+                        rewriteFlashItemsWithSoldQty();
 
-            String id = "E" + String.format("%03d", i);
+                        // Phase 6: Rewrite Customers with correct totalSpent and tier
+                        rewriteCustomersWithSpent();
 
-            String createdAt = randomDate();
-            String updatedAt = randomDate();
+                        // Phase 7: Generate Users CSV
+                        generateUsers(NUM_USERS);
 
-            LocalDateTime start =
-                    LocalDateTime.now().minusDays(random.nextInt(30));
+                        // Phase 8: Generate Payments CSV (one per SUCCESS order)
+                        generatePayments();
 
-            LocalDateTime end =
-                    start.plusHours(2 + random.nextInt(5));
+                        // Phase 9: Generate OrderTransactions CSV
+                        generateOrderTransactions();
 
-            String eventName =
-                    "Mega Flash Sale " + (i);
+                        System.out.println("Generate CSV SUCCESS!");
 
-            String status =
-                    SALE_STATUS[random.nextInt(SALE_STATUS.length)];
-
-            bw.write(String.join(",",
-                    id,
-                    createdAt,
-                    updatedAt,
-                    eventName,
-                    start.format(formatter),
-                    end.format(formatter),
-                    status
-            ));
-
-            bw.newLine();
+                } catch (Exception e) {
+                        e.printStackTrace();
+                }
         }
 
-        bw.close();
-    }
+        // =========================================================
+        // PRODUCTS
+        // =========================================================
 
-    // =========================================================
-    // FLASH ITEMS
-    // =========================================================
+        private static void generateProducts(int count) throws IOException {
 
-    private static void generateFlashItems(int count)
-            throws IOException {
+                BufferedWriter bw = new BufferedWriter(new FileWriter("data/products.csv"));
 
-        BufferedWriter bw =
-                new BufferedWriter(new FileWriter("data/flash_items.csv"));
+                bw.write("id,createdAt,updatedAt,name,category,originalPrice,stockQty,version,status");
+                bw.newLine();
 
-        bw.write("id,createdAt,updatedAt,eventId,productId,flashPrice,limitedQty,soldQty,version,status");
-        bw.newLine();
+                for (int i = 1; i <= count; i++) {
 
-        for (int i = 1; i <= count; i++) {
+                        int categoryIndex = random.nextInt(CATEGORIES.length);
 
-            String id = "FI" + String.format("%05d", i);
+                        String category = CATEGORIES[categoryIndex];
 
-            String createdAt = randomDate();
-            String updatedAt = randomDate();
+                        String productName = PRODUCT_NAMES[categoryIndex][random
+                                        .nextInt(PRODUCT_NAMES[categoryIndex].length)];
 
-            String eventId =
-                    "E" + String.format("%03d",
-                            1 + random.nextInt(50));
+                        String fullProductName = productName + " " +
+                                        (2023 + random.nextInt(4)) +
+                                        " Edition";
 
-            String productId =
-                    "P" + String.format("%05d",
-                            1 + random.nextInt(5000));
+                        String id = "P" + String.format("%05d", i);
 
-            int limitedQty =
-                    10 + random.nextInt(200);
+                        LocalDateTime createdAt = randomDateTime();
+                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
 
-            int soldQty =
-                    random.nextInt(limitedQty + 1);
+                        double price = 500000 + random.nextInt(50000000);
 
-            double flashPrice =
-                    100000 + random.nextInt(30000000);
+                        int stockQty = 100 + random.nextInt(5000);
 
-            int version =
-                    random.nextInt(10);
+                        int version = random.nextInt(20);
 
-            String status =
-                    SALE_STATUS[random.nextInt(SALE_STATUS.length)];
+                        // Product status: ACTIVE or DISABLED (not UPCOMING/ENDED)
+                        String status = random.nextInt(10) < 8 ? "ACTIVE" : "DISABLED";
 
-            bw.write(String.join(",",
-                    id,
-                    createdAt,
-                    updatedAt,
-                    eventId,
-                    productId,
-                    String.valueOf((long) flashPrice),
-                    String.valueOf(limitedQty),
-                    String.valueOf(soldQty),
-                    String.valueOf(version),
-                    status
-            ));
+                        // Store price for FlashItem reference
+                        productPriceMap.put(id, price);
 
-            bw.newLine();
+                        bw.write(String.join(",",
+                                        id,
+                                        createdAt.format(formatter),
+                                        updatedAt.format(formatter),
+                                        fullProductName,
+                                        category,
+                                        String.valueOf((long) price),
+                                        String.valueOf(stockQty),
+                                        String.valueOf(version),
+                                        status));
+
+                        bw.newLine();
+                }
+
+                bw.close();
         }
 
-        bw.close();
-    }
+        // =========================================================
+        // FLASH EVENTS
+        // =========================================================
 
-    // =========================================================
-    // CUSTOMERS
-    // =========================================================
+        private static void generateFlashEvents(int count)
+                        throws IOException {
 
-    private static void generateCustomers(int count)
-            throws IOException {
+                BufferedWriter bw = new BufferedWriter(new FileWriter("data/flash_events.csv"));
 
-        BufferedWriter bw =
-                new BufferedWriter(new FileWriter("data/customers.csv"));
+                bw.write("id,createdAt,updatedAt,eventName,startTime,endTime,status");
+                bw.newLine();
 
-        bw.write("id,createdAt,updatedAt,fullName,phone,email,tier,totalSpent,active");
-        bw.newLine();
+                LocalDateTime now = LocalDateTime.now();
 
-        for (int i = 1; i <= count; i++) {
+                for (int i = 1; i <= count; i++) {
 
-            String id = "C" + String.format("%05d", i);
+                        String id = "E" + String.format("%03d", i);
 
-            String createdAt = randomDate();
-            String updatedAt = randomDate();
+                        LocalDateTime createdAt = randomDateTime();
+                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
 
-            String fullName = randomFullName();
+                        LocalDateTime start = now.minusDays(random.nextInt(30))
+                                        .plusHours(random.nextInt(24));
 
-            String email =
-                    createEmail(fullName, i);
+                        LocalDateTime end = start.plusHours(2 + random.nextInt(5));
 
-            String phone =
-                    "09" + (10000000 + random.nextInt(89999999));
+                        String eventName = "Mega Flash Sale " + (i);
 
-            String tier =
-                    CUSTOMER_TIERS[random.nextInt(CUSTOMER_TIERS.length)];
+                        // Derive status from start/end time relative to now
+                        String status;
+                        if (now.isBefore(start)) {
+                                status = "UPCOMING";
+                        } else if (now.isAfter(end)) {
+                                status = "ENDED";
+                        } else {
+                                status = "ACTIVE";
+                        }
 
-            double totalSpent =
-                    random.nextInt(200000000);
+                        eventStartMap.put(id, start);
+                        eventEndMap.put(id, end);
+                        eventFlashItemsMap.put(id, new ArrayList<>());
 
-            boolean active =
-                    random.nextBoolean();
+                        bw.write(String.join(",",
+                                        id,
+                                        createdAt.format(formatter),
+                                        updatedAt.format(formatter),
+                                        eventName,
+                                        start.format(formatter),
+                                        end.format(formatter),
+                                        status));
 
-            bw.write(String.join(",",
-                    id,
-                    createdAt,
-                    updatedAt,
-                    fullName,
-                    phone,
-                    email,
-                    tier,
-                    String.valueOf((long) totalSpent),
-                    String.valueOf(active)
-            ));
+                        bw.newLine();
+                }
 
-            bw.newLine();
+                bw.close();
         }
 
-        bw.close();
-    }
+        // =========================================================
+        // FLASH ITEMS (Phase 2 - linked to real Products)
+        // =========================================================
 
-    // =========================================================
-    // ORDERS
-    // =========================================================
+        private static void generateFlashItems(int count)
+                        throws IOException {
 
-    private static void generateOrders(int count)
-            throws IOException {
+                // We'll write a temporary version first; soldQty = 0
+                // Phase 5 will rewrite with actual soldQty
 
-        BufferedWriter bw =
-                new BufferedWriter(new FileWriter("data/orders.csv"));
+                BufferedWriter bw = new BufferedWriter(new FileWriter("data/flash_items.csv"));
 
-        bw.write("id,createdAt,updatedAt,customerId,eventId,totalAmount,status,lockMechanism");
-        bw.newLine();
+                bw.write("id,createdAt,updatedAt,eventId,productId,flashPrice,limitedQty,soldQty,discountPercent,version,status");
+                bw.newLine();
 
-        for (int i = 1; i <= count; i++) {
+                for (int i = 1; i <= count; i++) {
 
-            String id = "O" + String.format("%06d", i);
+                        String id = "FI" + String.format("%05d", i);
 
-            String createdAt = randomDate();
-            String updatedAt = randomDate();
+                        LocalDateTime createdAt = randomDateTime();
+                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
 
-            String customerId =
-                    "C" + String.format("%05d",
-                            1 + random.nextInt(2500));
+                        String eventId = "E" + String.format("%03d",
+                                        1 + random.nextInt(NUM_EVENTS));
 
-            String eventId =
-                    "E" + String.format("%03d",
-                            1 + random.nextInt(50));
+                        // Pick a real product
+                        String productId = "P" + String.format("%05d",
+                                        1 + random.nextInt(NUM_PRODUCTS));
 
-            double totalAmount =
-                    100000 + random.nextInt(50000000);
+                        double originalPrice = productPriceMap.get(productId);
 
-            String status =
-                    ORDER_STATUS[random.nextInt(ORDER_STATUS.length)];
+                        // Discount between 10% and 70%
+                        int discountPct = 10 + random.nextInt(61);
+                        double flashPrice = Math.round(originalPrice * (100 - discountPct) / 100.0);
 
-            String lock =
-                    LOCKS[random.nextInt(LOCKS.length)];
+                        int limitedQty = 10 + random.nextInt(200);
 
-            bw.write(String.join(",",
-                    id,
-                    createdAt,
-                    updatedAt,
-                    customerId,
-                    eventId,
-                    String.valueOf((long) totalAmount),
-                    status,
-                    lock
-            ));
+                        // soldQty starts at 0, will be rewritten in Phase 5
+                        int soldQty = 0;
 
-            bw.newLine();
+                        int version = random.nextInt(10);
+
+                        String status;
+                        LocalDateTime eventEnd = eventEndMap.get(eventId);
+                        LocalDateTime eventStart = eventStartMap.get(eventId);
+                        LocalDateTime now = LocalDateTime.now();
+                        if (now.isBefore(eventStart)) {
+                                status = "UPCOMING";
+                        } else if (now.isAfter(eventEnd)) {
+                                status = "ENDED";
+                        } else {
+                                status = "ACTIVE";
+                        }
+
+                        // Register flash item in maps
+                        eventFlashItemsMap.get(eventId).add(id);
+                        flashItemPriceMap.put(id, flashPrice);
+                        flashItemProductMap.put(id, productId);
+                        flashItemSoldQtyMap.put(id, 0);
+                        flashItemLimitedQtyMap.put(id, limitedQty);
+
+                        bw.write(String.join(",",
+                                        id,
+                                        createdAt.format(formatter),
+                                        updatedAt.format(formatter),
+                                        eventId,
+                                        productId,
+                                        String.valueOf((long) flashPrice),
+                                        String.valueOf(limitedQty),
+                                        String.valueOf(soldQty),
+                                        String.valueOf(discountPct),
+                                        String.valueOf(version),
+                                        status));
+
+                        bw.newLine();
+                }
+
+                bw.close();
         }
 
-        bw.close();
-    }
+        // =========================================================
+        // CUSTOMERS Phase 1 (generate with placeholder totalSpent)
+        // =========================================================
 
-    // =========================================================
-    // ORDER DETAILS
-    // =========================================================
+        private static void generateCustomersPhase1(int count)
+                        throws IOException {
 
-    private static void generateOrderDetails(int count)
-            throws IOException {
-
-        BufferedWriter bw =
-                new BufferedWriter(new FileWriter("data/order_details.csv"));
-
-        bw.write("id,createdAt,updatedAt,orderId,flashItemId,quantity,unitPrice,subTotal");
-        bw.newLine();
-
-        for (int i = 1; i <= count; i++) {
-
-            String id = "OD" + String.format("%06d", i);
-
-            String createdAt = randomDate();
-            String updatedAt = randomDate();
-
-            String orderId =
-                    "O" + String.format("%06d",
-                            1 + random.nextInt(3000));
-
-            String flashItemId =
-                    "FI" + String.format("%05d",
-                            1 + random.nextInt(1000));
-
-            int quantity =
-                    1 + random.nextInt(2);
-
-            double unitPrice =
-                    100000 + random.nextInt(10000000);
-
-            double subTotal =
-                    quantity * unitPrice;
-
-            bw.write(String.join(",",
-                    id,
-                    createdAt,
-                    updatedAt,
-                    orderId,
-                    flashItemId,
-                    String.valueOf(quantity),
-                    String.valueOf((long) unitPrice),
-                    String.valueOf((long) subTotal)
-            ));
-
-            bw.newLine();
+                // Phase 1: just register customers, don't write final CSV yet
+                for (int i = 1; i <= count; i++) {
+                        String id = "C" + String.format("%05d", i);
+                        customerSpentMap.put(id, 0.0);
+                }
         }
 
-        bw.close();
-    }
+        // =========================================================
+        // ORDERS + ORDER DETAILS (generated together for consistency)
+        // =========================================================
 
-    // =========================================================
-    // HELPER METHODS
-    // =========================================================
+        private static void generateOrdersAndDetails(int orderCount)
+                        throws IOException {
 
-    private static String randomDate() {
+                BufferedWriter bwOrders = new BufferedWriter(new FileWriter("data/orders.csv"));
+                BufferedWriter bwDetails = new BufferedWriter(new FileWriter("data/order_details.csv"));
 
-        LocalDateTime date =
-                LocalDateTime.now()
-                        .minusDays(random.nextInt(365))
-                        .minusHours(random.nextInt(24))
-                        .minusMinutes(random.nextInt(60));
+                bwOrders.write("id,createdAt,updatedAt,customerId,eventId,totalAmount,status,lockMechanism");
+                bwOrders.newLine();
 
-        return date.format(formatter);
-    }
+                bwDetails.write("id,createdAt,updatedAt,orderId,flashItemId,quantity,unitPrice,subTotal");
+                bwDetails.newLine();
 
-    private static String randomFullName() {
+                int detailCounter = 0;
 
-        return FIRST_NAMES[random.nextInt(FIRST_NAMES.length)] + " "
-                + MIDDLE_NAMES[random.nextInt(MIDDLE_NAMES.length)] + " "
-                + LAST_NAMES[random.nextInt(LAST_NAMES.length)];
-    }
+                for (int i = 1; i <= orderCount; i++) {
 
-    private static String createEmail(String fullName, int number) {
+                        String orderId = "O" + String.format("%06d", i);
 
-        String email =
-                fullName.toLowerCase()
-                        .replace(" ", ".");
+                        LocalDateTime createdAt = randomDateTime();
+                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
 
-        return email + number + "@gmail.com";
-    }
+                        String customerId = "C" + String.format("%05d",
+                                        1 + random.nextInt(NUM_CUSTOMERS));
+
+                        // Pick an event that has flash items
+                        String eventId = pickEventWithItems();
+
+                        String status = ORDER_STATUS[random.nextInt(ORDER_STATUS.length)];
+
+                        String lock = LOCKS[random.nextInt(LOCKS.length)];
+
+                        // Generate 1-3 OrderDetails for this order
+                        int numDetails = 1 + random.nextInt(3);
+                        double totalAmount = 0;
+
+                        List<String> eventItems = eventFlashItemsMap.get(eventId);
+
+                        for (int d = 0; d < numDetails; d++) {
+
+                                detailCounter++;
+                                String detailId = "OD" + String.format("%06d", detailCounter);
+
+                                // Pick a flash item from the SAME event
+                                String flashItemId = eventItems.get(
+                                                random.nextInt(eventItems.size()));
+
+                                // quantity: 1 or 2 (max 2 per flash sale rule)
+                                int quantity = 1 + random.nextInt(2);
+
+                                // unitPrice = flashPrice of the item
+                                double unitPrice = flashItemPriceMap.get(flashItemId);
+
+                                double subTotal = quantity * unitPrice;
+                                totalAmount += subTotal;
+
+                                // Accumulate soldQty for this flash item (only for SUCCESS orders)
+                                if ("SUCCESS".equals(status)) {
+                                        int currentSold = flashItemSoldQtyMap.getOrDefault(flashItemId, 0);
+                                        int limitedQty = flashItemLimitedQtyMap.get(flashItemId);
+                                        int newSold = Math.min(currentSold + quantity, limitedQty);
+                                        flashItemSoldQtyMap.put(flashItemId, newSold);
+                                }
+
+                                bwDetails.write(String.join(",",
+                                                detailId,
+                                                createdAt.format(formatter),
+                                                updatedAt.format(formatter),
+                                                orderId,
+                                                flashItemId,
+                                                String.valueOf(quantity),
+                                                String.valueOf((long) unitPrice),
+                                                String.valueOf((long) subTotal)));
+                                bwDetails.newLine();
+                        }
+
+                        // totalAmount = sum of all subTotals
+                        // Accumulate customer spending (only for SUCCESS orders)
+                        if ("SUCCESS".equals(status)) {
+                                double currentSpent = customerSpentMap.getOrDefault(customerId, 0.0);
+                                customerSpentMap.put(customerId, currentSpent + totalAmount);
+                        }
+
+                        // Store order info for Payment & OrderTransaction generation
+                        orderCustomerMap.put(orderId, customerId);
+                        orderEventMap.put(orderId, eventId);
+                        orderTotalMap.put(orderId, totalAmount);
+                        orderStatusMap.put(orderId, status);
+                        orderLockMap.put(orderId, lock);
+
+                        bwOrders.write(String.join(",",
+                                        orderId,
+                                        createdAt.format(formatter),
+                                        updatedAt.format(formatter),
+                                        customerId,
+                                        eventId,
+                                        String.valueOf((long) totalAmount),
+                                        status,
+                                        lock));
+                        bwOrders.newLine();
+                }
+
+                bwOrders.close();
+                bwDetails.close();
+        }
+
+        // =========================================================
+        // REWRITE FLASH ITEMS with correct soldQty (Phase 5)
+        // =========================================================
+
+        private static void rewriteFlashItemsWithSoldQty() throws IOException {
+
+                // Re-read and rewrite flash_items.csv with updated soldQty
+                BufferedWriter bw = new BufferedWriter(new FileWriter("data/flash_items.csv"));
+
+                bw.write("id,createdAt,updatedAt,eventId,productId,flashPrice,limitedQty,soldQty,discountPercent,version,status");
+                bw.newLine();
+
+                for (int i = 1; i <= NUM_FLASH_ITEMS; i++) {
+
+                        String id = "FI" + String.format("%05d", i);
+
+                        LocalDateTime createdAt = randomDateTime();
+                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
+
+                        // Find which event this item belongs to
+                        String eventId = null;
+                        for (Map.Entry<String, List<String>> entry : eventFlashItemsMap.entrySet()) {
+                                if (entry.getValue().contains(id)) {
+                                        eventId = entry.getKey();
+                                        break;
+                                }
+                        }
+
+                        String productId = flashItemProductMap.get(id);
+                        double originalPrice = productPriceMap.get(productId);
+                        double flashPrice = flashItemPriceMap.get(id);
+                        int limitedQty = flashItemLimitedQtyMap.get(id);
+                        int soldQty = flashItemSoldQtyMap.getOrDefault(id, 0);
+
+                        // Recalculate discountPercent from prices
+                        int discountPct = (int) Math.round((1.0 - flashPrice / originalPrice) * 100);
+
+                        int version = random.nextInt(10);
+
+                        String status;
+                        LocalDateTime eventEnd = eventEndMap.get(eventId);
+                        LocalDateTime eventStart = eventStartMap.get(eventId);
+                        LocalDateTime now = LocalDateTime.now();
+                        if (now.isBefore(eventStart)) {
+                                status = "UPCOMING";
+                        } else if (now.isAfter(eventEnd)) {
+                                status = "ENDED";
+                        } else {
+                                status = "ACTIVE";
+                        }
+
+                        bw.write(String.join(",",
+                                        id,
+                                        createdAt.format(formatter),
+                                        updatedAt.format(formatter),
+                                        eventId,
+                                        productId,
+                                        String.valueOf((long) flashPrice),
+                                        String.valueOf(limitedQty),
+                                        String.valueOf(soldQty),
+                                        String.valueOf(discountPct),
+                                        String.valueOf(version),
+                                        status));
+
+                        bw.newLine();
+                }
+
+                bw.close();
+        }
+
+        // =========================================================
+        // REWRITE CUSTOMERS with correct totalSpent and tier (Phase 6)
+        // =========================================================
+
+        private static void rewriteCustomersWithSpent() throws IOException {
+
+                BufferedWriter bw = new BufferedWriter(new FileWriter("data/customers.csv"));
+
+                bw.write("id,createdAt,updatedAt,fullName,phone,email,tier,totalSpent,active");
+                bw.newLine();
+
+                for (int i = 1; i <= NUM_CUSTOMERS; i++) {
+
+                        String id = "C" + String.format("%05d", i);
+
+                        LocalDateTime createdAt = randomDateTime();
+                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
+
+                        String fullName = randomFullName();
+
+                        String email = createEmail(fullName, i);
+
+                        String phone = "09" + (10000000 + random.nextInt(89999999));
+
+                        double totalSpent = customerSpentMap.getOrDefault(id, 0.0);
+
+                        // Tier derived from totalSpent
+                        String tier;
+                        if (totalSpent >= 50000000) {
+                                tier = "PREMIUM";
+                        } else if (totalSpent >= 10000000) {
+                                tier = "VIP";
+                        } else {
+                                tier = "NORMAL";
+                        }
+
+                        boolean active = random.nextInt(10) < 8; // 80% active
+
+                        bw.write(String.join(",",
+                                        id,
+                                        createdAt.format(formatter),
+                                        updatedAt.format(formatter),
+                                        fullName,
+                                        phone,
+                                        email,
+                                        tier,
+                                        String.valueOf((long) totalSpent),
+                                        String.valueOf(active)));
+
+                        bw.newLine();
+                }
+
+                bw.close();
+        }
+
+        // =========================================================
+        // USERS
+        // =========================================================
+
+        private static void generateUsers(int count) throws IOException {
+
+                BufferedWriter bw = new BufferedWriter(new FileWriter("data/users.csv"));
+
+                bw.write("id,createdAt,updatedAt,username,passwordHash,role,active");
+                bw.newLine();
+
+                for (int i = 1; i <= count; i++) {
+
+                        String id = "U" + String.format("%05d", i);
+
+                        LocalDateTime createdAt = randomDateTime();
+                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
+
+                        String username = "user" + i;
+
+                        // Simulated bcrypt-style hash
+                        String passwordHash = "$2a$10$" + randomAlphanumeric(53);
+
+                        // Role distribution: 80% CUSTOMER, 15% SELLER, 5% ADMIN
+                        String role;
+                        int roleRoll = random.nextInt(100);
+                        if (roleRoll < 80) {
+                                role = "CUSTOMER";
+                        } else if (roleRoll < 95) {
+                                role = "SELLER";
+                        } else {
+                                role = "ADMIN";
+                        }
+
+                        boolean active = random.nextInt(10) < 9; // 90% active
+
+                        bw.write(String.join(",",
+                                        id,
+                                        createdAt.format(formatter),
+                                        updatedAt.format(formatter),
+                                        username,
+                                        passwordHash,
+                                        role,
+                                        String.valueOf(active)));
+
+                        bw.newLine();
+                }
+
+                bw.close();
+        }
+
+        // =========================================================
+        // PAYMENTS (one per SUCCESS order)
+        // =========================================================
+
+        private static void generatePayments() throws IOException {
+
+                BufferedWriter bw = new BufferedWriter(new FileWriter("data/payments.csv"));
+
+                bw.write("id,createdAt,updatedAt,orderId,customerId,paymentMethod,amount");
+                bw.newLine();
+
+                int paymentCounter = 0;
+
+                for (Map.Entry<String, String> entry : orderStatusMap.entrySet()) {
+
+                        String orderId = entry.getKey();
+                        String status = entry.getValue();
+
+                        // Only SUCCESS orders have payments
+                        if (!"SUCCESS".equals(status)) {
+                                continue;
+                        }
+
+                        paymentCounter++;
+                        String id = "PAY" + String.format("%06d", paymentCounter);
+
+                        LocalDateTime createdAt = randomDateTime();
+                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
+
+                        String customerId = orderCustomerMap.get(orderId);
+                        double amount = orderTotalMap.get(orderId);
+
+                        String paymentMethod = PAYMENT_METHODS[random.nextInt(PAYMENT_METHODS.length)];
+
+                        bw.write(String.join(",",
+                                        id,
+                                        createdAt.format(formatter),
+                                        updatedAt.format(formatter),
+                                        orderId,
+                                        customerId,
+                                        paymentMethod,
+                                        String.valueOf((long) amount)));
+
+                        bw.newLine();
+                }
+
+                bw.close();
+        }
+
+        // =========================================================
+        // ORDER TRANSACTIONS (one per order)
+        // =========================================================
+
+        private static void generateOrderTransactions() throws IOException {
+
+                BufferedWriter bw = new BufferedWriter(new FileWriter("data/transactions.csv"));
+
+                bw.write("id,createdAt,updatedAt,orderId,threadName,mechanism,success,retryCount,executionTimeMs,message");
+                bw.newLine();
+
+                int txCounter = 0;
+
+                for (Map.Entry<String, String> entry : orderStatusMap.entrySet()) {
+
+                        String orderId = entry.getKey();
+                        String status = entry.getValue();
+
+                        txCounter++;
+                        String id = "TX" + String.format("%06d", txCounter);
+
+                        LocalDateTime createdAt = randomDateTime();
+                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
+
+                        String threadName = THREAD_NAMES[random.nextInt(THREAD_NAMES.length)];
+
+                        String mechanism = orderLockMap.get(orderId);
+
+                        boolean success = "SUCCESS".equals(status);
+
+                        int retryCount;
+                        if (success) {
+                                retryCount = random.nextInt(3); // 0-2 retries
+                        } else {
+                                retryCount = 1 + random.nextInt(5); // 1-5 retries
+                        }
+
+                        long executionTimeMs = 5 + random.nextInt(500); // 5-504 ms
+
+                        String message;
+                        if (success) {
+                                message = TX_MESSAGES_SUCCESS[random.nextInt(TX_MESSAGES_SUCCESS.length)];
+                        } else {
+                                message = TX_MESSAGES_FAIL[random.nextInt(TX_MESSAGES_FAIL.length)];
+                        }
+
+                        bw.write(String.join(",",
+                                        id,
+                                        createdAt.format(formatter),
+                                        updatedAt.format(formatter),
+                                        orderId,
+                                        threadName,
+                                        mechanism,
+                                        String.valueOf(success),
+                                        String.valueOf(retryCount),
+                                        String.valueOf(executionTimeMs),
+                                        message));
+
+                        bw.newLine();
+                }
+
+                bw.close();
+        }
+
+        // =========================================================
+        // HELPER METHODS
+        // =========================================================
+
+        /**
+         * Returns a random LocalDateTime within the past year.
+         */
+        private static LocalDateTime randomDateTime() {
+
+                return LocalDateTime.now()
+                                .minusDays(random.nextInt(365))
+                                .minusHours(random.nextInt(24))
+                                .minusMinutes(random.nextInt(60));
+        }
+
+        /**
+         * Returns a random LocalDateTime that is always >= createdAt.
+         * Ensures updatedAt >= createdAt.
+         */
+        private static LocalDateTime randomUpdatedAt(LocalDateTime createdAt) {
+
+                // updatedAt = createdAt + 0 to 30 days + 0 to 23 hours
+                return createdAt
+                                .plusDays(random.nextInt(31))
+                                .plusHours(random.nextInt(24))
+                                .plusMinutes(random.nextInt(60));
+        }
+
+        /**
+         * Picks a random event that has at least 1 flash item.
+         */
+        private static String pickEventWithItems() {
+
+                List<String> eventsWithItems = new ArrayList<>();
+                for (Map.Entry<String, List<String>> entry : eventFlashItemsMap.entrySet()) {
+                        if (!entry.getValue().isEmpty()) {
+                                eventsWithItems.add(entry.getKey());
+                        }
+                }
+
+                if (eventsWithItems.isEmpty()) {
+                        // Fallback: shouldn't happen with 1000 flash items across 50 events
+                        return "E001";
+                }
+
+                return eventsWithItems.get(random.nextInt(eventsWithItems.size()));
+        }
+
+        private static String randomFullName() {
+
+                return FIRST_NAMES[random.nextInt(FIRST_NAMES.length)] + " "
+                                + MIDDLE_NAMES[random.nextInt(MIDDLE_NAMES.length)] + " "
+                                + LAST_NAMES[random.nextInt(LAST_NAMES.length)];
+        }
+
+        private static String createEmail(String fullName, int number) {
+
+                String email = fullName.toLowerCase()
+                                .replace(" ", ".");
+
+                return email + number + "@gmail.com";
+        }
+
+        /**
+         * Generates a random alphanumeric string of the given length.
+         * Used for simulating password hashes.
+         */
+        private static String randomAlphanumeric(int length) {
+
+                String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./";
+                StringBuilder sb = new StringBuilder(length);
+                for (int i = 0; i < length; i++) {
+                        sb.append(chars.charAt(random.nextInt(chars.length())));
+                }
+                return sb.toString();
+        }
 }

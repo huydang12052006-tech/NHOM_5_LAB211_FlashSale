@@ -92,13 +92,13 @@ public class OrderDetail extends BaseEntity {
 
         return String.join(",",
                 escapeCsv(getId()),
+                formatDateTime(getCreatedAt()),
+                formatDateTime(getUpdatedAt()),                
                 escapeCsv(orderId),
                 escapeCsv(flashItemId),
                 String.valueOf(quantity),
                 String.valueOf(unitPrice),
-                String.valueOf(subTotal),
-                formatDateTime(getCreatedAt()),
-                formatDateTime(getUpdatedAt())
+                String.valueOf(subTotal)
         );
     }
 

@@ -80,10 +80,15 @@ public class Product extends BaseEntity {
     @Override
     public String toCsvLine() {
         return String.join(",",
-                this.getId(), this.name, this.category,
-                String.valueOf(this.originalPrice), String.valueOf(this.stockQty),
-                String.valueOf(this.version), this.status.name(), // Lưu tên Enum vào CSV (ACTIVE/INACTIVE/DELETED)
-                this.getCreatedAt().toString(), this.getUpdatedAt().toString()
+                this.getId(),
+                this.getCreatedAt().toString(),
+                this.getUpdatedAt().toString(),
+                this.name,
+                this.category,
+                String.valueOf(this.originalPrice),
+                String.valueOf(this.stockQty),
+                String.valueOf(this.version),
+                this.status.name()
         );
     }
     @Override

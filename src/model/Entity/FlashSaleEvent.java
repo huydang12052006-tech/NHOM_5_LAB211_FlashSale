@@ -58,8 +58,13 @@ public class FlashSaleEvent extends BaseEntity {
     @Override
     public String toCsvLine() {
         return String.join(",",
-                this.getId(), this.eventName, this.startTime.toString(), this.endTime.toString(), this.status.name(),
-                this.getCreatedAt().toString(), this.getUpdatedAt().toString()
+                this.getId(),
+                this.getCreatedAt().toString(),
+                this.getUpdatedAt().toString(),
+                this.eventName,
+                this.startTime.toString(),
+                this.endTime.toString(),
+                this.status.name()
         );
     }
     @Override

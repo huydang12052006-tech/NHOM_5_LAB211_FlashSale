@@ -109,14 +109,14 @@ public class Customer extends BaseEntity {
 
         return String.join(",",
                 escapeCsv(getId()),
+                formatDateTime(getCreatedAt()),
+                formatDateTime(getUpdatedAt()),
                 escapeCsv(fullName),
                 escapeCsv(phone),
                 escapeCsv(email),
                 tier.name(),
                 String.valueOf(totalSpent),
-                String.valueOf(active),
-                formatDateTime(getCreatedAt()),
-                formatDateTime(getUpdatedAt())
+                String.valueOf(active)
         );
     }
 

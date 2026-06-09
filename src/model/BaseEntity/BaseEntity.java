@@ -89,7 +89,7 @@ public abstract class BaseEntity {
             return "";
         }
 
-        return dateTime.format(FORMATTER);
+        return dateTime.toString();
     }
 
     protected LocalDateTime parseDateTime(String value) {

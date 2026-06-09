@@ -8,6 +8,8 @@ import java.nio.channels.FileLock;
 
 import java.util.List;
 
+import exception.*;
+
 public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
     
     private static final String FILE_PATH = "data/flash_items.csv";
@@ -32,7 +34,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
     }
 
     public boolean sellWithNoLock(String flashItemId,
-            int quantity) throws IOException {
+            int quantity) throws IOException, FlashSaleException {
 
         List<FlashSaleItem> items = findAll();
 
@@ -72,12 +74,12 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             return true;
         }
 
-        return false;
+        throw new OutOfStockException("Not enough stock for " + flashItemId);
     }
 
     public synchronized boolean sellWithSynchronized(String flashItemId,
             int quantity)
-            throws IOException {
+            throws IOException, FlashSaleException {
 
         List<FlashSaleItem> items = findAll();
 
@@ -93,7 +95,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
         tại cùng thời điểm
          */
         if (item.getSoldQty() + quantity > item.getLimitedQty()) {
-            return false;
+            throw new OutOfStockException("Not enough stock for " + flashItemId);
         }
 
         item.setSoldQty(item.getSoldQty() + quantity);
@@ -105,7 +107,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
 
     public boolean sellWithFileLock(String flashItemId,
             int quantity)
-            throws IOException {
+            throws IOException, FlashSaleException {
 
         /*
         FileLock khóa trực tiếp file CSV
@@ -125,7 +127,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             }
 
             if (item.getSoldQty() + quantity > item.getLimitedQty()) {
-                return false;
+                throw new OutOfStockException("Not enough stock for " + flashItemId);
             }
 
             item.setSoldQty(item.getSoldQty() + quantity);
@@ -138,7 +140,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
 
     public boolean sellWithOptimisticLock(String flashItemId,
             int quantity)
-            throws IOException {
+            throws IOException, FlashSaleException {
 
         int retry = 0;
 
@@ -159,7 +161,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             validate stock
              */
             if (currentSold + quantity > item.getLimitedQty()) {
-                return false;
+                throw new OutOfStockException("Not enough stock for " + flashItemId);
             }
 
             /*
@@ -213,6 +215,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             return true;
         }
 
-        return false;
+        // nếu retry vượt mức, báo lỗi rõ ràng
+        throw new VersionConflictException("Optimistic lock failed after " + MAX_RETRY + " retries for " + flashItemId);
     }
 }

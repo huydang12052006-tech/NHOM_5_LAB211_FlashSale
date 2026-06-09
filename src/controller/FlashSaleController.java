@@ -96,8 +96,10 @@ public class FlashSaleController {
 
         String itemId = "ITEM" + (System.currentTimeMillis() % 10000);
 
-        // CẬP NHẬT CHUẨN: Truyền thêm tham số thứ 8 là ActivationStatus.ACTIVE theo đúng thiết kế của Leader
-        FlashSaleItem item = new FlashSaleItem(itemId, LocalDateTime.now(), LocalDateTime.now(),eventId, productId, flashPrice, limitedQty, 0, 1, SaleStatus.ACTIVE);
+        // Tính discountPercent từ giá gốc và giá flash sale
+        double discountPercent = Math.round((1.0 - flashPrice / product.getOriginalPrice()) * 100.0 * 100.0) / 100.0;
+
+        FlashSaleItem item = new FlashSaleItem(itemId, LocalDateTime.now(), LocalDateTime.now(), eventId, productId, flashPrice, limitedQty, 0, discountPercent, 1, SaleStatus.ACTIVE);
 
         flashSaleItemRepository.update(item);
         System.out.println("[Thong bao]: Dua san pham vao Flash Sale thanh cong!");

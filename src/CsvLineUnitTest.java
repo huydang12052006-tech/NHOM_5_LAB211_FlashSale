@@ -7,10 +7,14 @@ import model.Entity.Order;
 import model.Entity.OrderDetail;
 import model.Entity.OrderTransaction;
 import model.Entity.Product;
+import model.Entity.Payment;
+import model.Entity.User;
 import model.Enum.CustomerTier;
 import model.Enum.LockMechanism;
 import model.Enum.OrderStatus;
 import model.Enum.SaleStatus;
+import model.Enum.PaymentMethod;
+import model.Enum.UserRole;
 
 public class CsvLineUnitTest {
 
@@ -34,6 +38,10 @@ public class CsvLineUnitTest {
         runTest("OrderDetail.fromCsvLine", CsvLineUnitTest::testOrderDetailFromCsvLine);
         runTest("OrderTransaction.toCsvLine", CsvLineUnitTest::testOrderTransactionToCsvLine);
         runTest("OrderTransaction.fromCsvLine", CsvLineUnitTest::testOrderTransactionFromCsvLine);
+        runTest("Payment.toCsvLine", CsvLineUnitTest::testPaymentToCsvLine);
+        runTest("Payment.fromCsvLine", CsvLineUnitTest::testPaymentFromCsvLine);
+        runTest("User.toCsvLine", CsvLineUnitTest::testUserToCsvLine);
+        runTest("User.fromCsvLine", CsvLineUnitTest::testUserFromCsvLine);
 
         System.out.println("========================================");
         System.out.println("SUMMARY: " + passedTests + "/" + totalTests + " tests passed.");
@@ -237,6 +245,56 @@ public class CsvLineUnitTest {
         assertEquals(3, transaction.getRetryCount());
         assertEquals(88L, transaction.getExecutionTimeMs());
         assertEquals("failed", transaction.getMessage());
+    }
+
+    private static void testPaymentToCsvLine() {
+        Payment payment = new Payment(
+                "PAY001", CREATED_AT, UPDATED_AT,
+                "O001", "C001", PaymentMethod.CASH, 12345.0);
+
+        String expected = "PAY001,2026-01-02T03:04:05,2026-02-03T04:05:06,O001,C001,CASH,12345.0";
+        String actual = payment.toCsvLine();
+
+        printDebug("Input object", payment.toString(), expected, actual);
+        assertEquals(expected, actual);
+    }
+
+    private static void testPaymentFromCsvLine() {
+        Payment payment = new Payment();
+        String input = "PAY002,2026-01-02T03:04:05,2026-02-03T04:05:06,O002,C002,BANKING,999.5";
+        payment.fromCsvLine(input);
+
+        printDebug("Input CSV", input, input, payment.toCsvLine());
+        assertBaseFields(payment, "PAY002");
+        assertEquals("O002", payment.getOrderId());
+        assertEquals("C002", payment.getCustomerId());
+        assertEquals(PaymentMethod.BANKING, payment.getPaymentMethod());
+        assertEquals(999.5, payment.getAmount());
+    }
+
+    private static void testUserToCsvLine() {
+        User user = new User(
+                "U001", CREATED_AT, UPDATED_AT,
+                "user1", "$2a$10$hashvalue", model.Enum.UserRole.CUSTOMER, true);
+
+        String expected = "U001,2026-01-02T03:04:05,2026-02-03T04:05:06,user1,$2a$10$hashvalue,CUSTOMER,true";
+        String actual = user.toCsvLine();
+
+        printDebug("Input object", user.toString(), expected, actual);
+        assertEquals(expected, actual);
+    }
+
+    private static void testUserFromCsvLine() {
+        User user = new User();
+        String input = "U002,2026-01-02T03:04:05,2026-02-03T04:05:06,user2,$2a$10$abc,ADMIN,false";
+        user.fromCsvLine(input);
+
+        printDebug("Input CSV", input, input, user.toCsvLine());
+        assertBaseFields(user, "U002");
+        assertEquals("user2", user.getUsername());
+        assertEquals("$2a$10$abc", user.getPasswordHash());
+        assertEquals(UserRole.ADMIN, user.getRole());
+        assertEquals(false, user.isActive());
     }
 
     private static void runTest(String testName, Runnable testMethod) {

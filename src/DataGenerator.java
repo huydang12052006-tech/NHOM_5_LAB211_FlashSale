@@ -175,6 +175,15 @@ public class DataGenerator {
         // orderId -> totalAmount
         private static final Map<String, Double> orderTotalMap = new HashMap<>();
 
+        // customerId + "_" + eventId + "_" + productId -> quantity purchased in that event (enforce max 2)
+        private static final Map<String, Integer> customerEventProductQty = new HashMap<>();
+
+        // orderId -> order createdAt (for timeline consistency)
+        private static final Map<String, java.time.LocalDateTime> orderCreatedAtMap = new HashMap<>();
+
+        // orderId -> payment createdAt (for transaction ordering)
+        private static final Map<String, java.time.LocalDateTime> orderPaymentTimeMap = new HashMap<>();
+
         // orderId -> status
         private static final Map<String, String> orderStatusMap = new HashMap<>();
 
@@ -357,17 +366,78 @@ public class DataGenerator {
         private static void generateFlashItems(int count)
                         throws IOException {
 
-                // We'll write a temporary version first; soldQty = 0
-                // Phase 5 will rewrite with actual soldQty
-
+                // Ensure every event has at least one FlashItem first
                 BufferedWriter bw = new BufferedWriter(new FileWriter("data/flash_items.csv"));
 
                 bw.write("id,createdAt,updatedAt,eventId,productId,flashPrice,limitedQty,soldQty,discountPercent,version,status");
                 bw.newLine();
 
-                for (int i = 1; i <= count; i++) {
+                int idx = 1;
+                // Phase A: create one item per event to guarantee coverage
+                for (int e = 1; e <= NUM_EVENTS && idx <= count; e++, idx++) {
+                        String id = "FI" + String.format("%05d", idx);
 
-                        String id = "FI" + String.format("%05d", i);
+                        LocalDateTime createdAt = randomDateTime();
+                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
+
+                        String eventId = "E" + String.format("%03d", e);
+
+                        // Pick a real product
+                        String productId = "P" + String.format("%05d",
+                                        1 + random.nextInt(NUM_PRODUCTS));
+
+                        double originalPrice = productPriceMap.get(productId);
+
+                        // Discount between 10% and 70%
+                        int discountPct = 10 + random.nextInt(61);
+                        double flashPrice = Math.round(originalPrice * (100 - discountPct) / 100.0);
+
+                        int limitedQty = 10 + random.nextInt(200);
+
+                        // soldQty starts at 0, will be rewritten in Phase 5
+                        int soldQty = 0;
+
+                        int version = 1; // deterministic initial version
+
+                        String status;
+                        LocalDateTime eventEnd = eventEndMap.get(eventId);
+                        LocalDateTime eventStart = eventStartMap.get(eventId);
+                        LocalDateTime now = LocalDateTime.now();
+                        if (now.isBefore(eventStart)) {
+                                status = "UPCOMING";
+                        } else if (now.isAfter(eventEnd)) {
+                                status = "ENDED";
+                        } else {
+                                status = "ACTIVE";
+                        }
+
+                        // Register flash item in maps
+                        eventFlashItemsMap.get(eventId).add(id);
+                        flashItemPriceMap.put(id, flashPrice);
+                        flashItemProductMap.put(id, productId);
+                        flashItemSoldQtyMap.put(id, 0);
+                        flashItemLimitedQtyMap.put(id, limitedQty);
+
+                        bw.write(String.join(",",
+                                        id,
+                                        createdAt.format(formatter),
+                                        updatedAt.format(formatter),
+                                        eventId,
+                                        productId,
+                                        String.valueOf((long) flashPrice),
+                                        String.valueOf(limitedQty),
+                                        String.valueOf(soldQty),
+                                        String.valueOf(discountPct),
+                                        String.valueOf(version),
+                                        status));
+
+                        bw.newLine();
+                }
+
+                // Phase B: create remaining items and distribute randomly
+                for (; idx <= count; idx++) {
+
+                        String id = "FI" + String.format("%05d", idx);
 
                         LocalDateTime createdAt = randomDateTime();
                         LocalDateTime updatedAt = randomUpdatedAt(createdAt);
@@ -387,10 +457,9 @@ public class DataGenerator {
 
                         int limitedQty = 10 + random.nextInt(200);
 
-                        // soldQty starts at 0, will be rewritten in Phase 5
                         int soldQty = 0;
 
-                        int version = random.nextInt(10);
+                        int version = 1;
 
                         String status;
                         LocalDateTime eventEnd = eventEndMap.get(eventId);
@@ -469,6 +538,9 @@ public class DataGenerator {
                         LocalDateTime createdAt = randomDateTime();
                         LocalDateTime updatedAt = randomUpdatedAt(createdAt);
 
+                        // record order createdAt for later timestamp consistency
+                        orderCreatedAtMap.put(orderId, createdAt);
+
                         String customerId = "C" + String.format("%05d",
                                         1 + random.nextInt(NUM_CUSTOMERS));
 
@@ -481,34 +553,91 @@ public class DataGenerator {
 
                         // Generate 1-3 OrderDetails for this order
                         int numDetails = 1 + random.nextInt(3);
+
                         double totalAmount = 0;
 
                         List<String> eventItems = eventFlashItemsMap.get(eventId);
+
+                        java.util.Set<String> usedFlashItems = new java.util.HashSet<>();
 
                         for (int d = 0; d < numDetails; d++) {
 
                                 detailCounter++;
                                 String detailId = "OD" + String.format("%06d", detailCounter);
 
-                                // Pick a flash item from the SAME event
-                                String flashItemId = eventItems.get(
-                                                random.nextInt(eventItems.size()));
+                                // Try to find a flashItem that:
+                                // - is not already used in this order
+                                // - has stock remaining
+                                // - respects the per-customer per-event per-product limit (max 2)
+                                String flashItemId = null;
+                                String productId = null;
+                                int attempts = 0;
+                                int maxAttempts = Math.max(10, eventItems.size() * 2);
+                                while (attempts < maxAttempts) {
+                                        attempts++;
+                                        String candidate = eventItems.get(random.nextInt(eventItems.size()));
+                                        if (usedFlashItems.contains(candidate)) {
+                                                continue;
+                                        }
+                                        int currentSold = flashItemSoldQtyMap.getOrDefault(candidate, 0);
+                                        int limitedQty = flashItemLimitedQtyMap.get(candidate);
+                                        int stockRemaining = limitedQty - currentSold;
+                                        if (stockRemaining <= 0) {
+                                                continue; // sold out
+                                        }
+                                        String candidateProduct = flashItemProductMap.get(candidate);
+                                        String key = customerId + "_" + eventId + "_" + candidateProduct;
+                                        int currentCustomerQty = customerEventProductQty.getOrDefault(key, 0);
+                                        if (currentCustomerQty >= 2) {
+                                                continue; // customer already reached limit for this product in this event
+                                        }
+                                        // Accept candidate
+                                        flashItemId = candidate;
+                                        productId = candidateProduct;
+                                        break;
+                                }
 
-                                // quantity: 1 or 2 (max 2 per flash sale rule)
-                                int quantity = 1 + random.nextInt(2);
+                                if (flashItemId == null) {
+                                        // Could not find a suitable flash item for this detail; skip
+                                        continue;
+                                }
 
-                                // unitPrice = flashPrice of the item
+                                // quantity: 1 or 2 (max 2 per flash sale rule), but cap by customer's remaining allowance
+                                int desiredQuantity = 1 + random.nextInt(2);
+                                String key = customerId + "_" + eventId + "_" + productId;
+                                int currentCustomerQty = customerEventProductQty.getOrDefault(key, 0);
+                                int remainingForCustomer = 2 - currentCustomerQty;
+                                if (remainingForCustomer <= 0) {
+                                        // shouldn't happen due to candidate filtering, but guard
+                                        continue;
+                                }
+
+                                int currentSold = flashItemSoldQtyMap.getOrDefault(flashItemId, 0);
+                                int limitedQty = flashItemLimitedQtyMap.get(flashItemId);
+                                int stockRemaining = limitedQty - currentSold;
+                                if (stockRemaining <= 0) {
+                                        continue;
+                                }
+
+                                int actualQuantity = Math.min(desiredQuantity, Math.min(remainingForCustomer, stockRemaining));
+                                if (actualQuantity <= 0) {
+                                        continue;
+                                }
+
+                                // Now compute pricing based on actualQuantity
                                 double unitPrice = flashItemPriceMap.get(flashItemId);
-
-                                double subTotal = quantity * unitPrice;
+                                double subTotal = actualQuantity * unitPrice;
                                 totalAmount += subTotal;
+
+                                // Mark flashItem used in this order to avoid duplicates
+                                usedFlashItems.add(flashItemId);
+
+                                // Update customer's per-event-product quantity (applies to all orders generated)
+                                customerEventProductQty.put(key, currentCustomerQty + actualQuantity);
 
                                 // Accumulate soldQty for this flash item (only for SUCCESS orders)
                                 if ("SUCCESS".equals(status)) {
-                                        int currentSold = flashItemSoldQtyMap.getOrDefault(flashItemId, 0);
-                                        int limitedQty = flashItemLimitedQtyMap.get(flashItemId);
-                                        int newSold = Math.min(currentSold + quantity, limitedQty);
-                                        flashItemSoldQtyMap.put(flashItemId, newSold);
+                                        flashItemSoldQtyMap.put(flashItemId, currentSold + actualQuantity);
                                 }
 
                                 bwDetails.write(String.join(",",
@@ -517,7 +646,7 @@ public class DataGenerator {
                                                 updatedAt.format(formatter),
                                                 orderId,
                                                 flashItemId,
-                                                String.valueOf(quantity),
+                                                String.valueOf(actualQuantity),
                                                 String.valueOf((long) unitPrice),
                                                 String.valueOf((long) subTotal)));
                                 bwDetails.newLine();
@@ -590,7 +719,8 @@ public class DataGenerator {
                         // Recalculate discountPercent from prices
                         int discountPct = (int) Math.round((1.0 - flashPrice / originalPrice) * 100);
 
-                        int version = random.nextInt(10);
+                        // Deterministic versioning: bump with sold quantities
+                        int version = 1 + (soldQty / 10);
 
                         String status;
                         LocalDateTime eventEnd = eventEndMap.get(eventId);
@@ -601,7 +731,12 @@ public class DataGenerator {
                         } else if (now.isAfter(eventEnd)) {
                                 status = "ENDED";
                         } else {
-                                status = "ACTIVE";
+                                // If sold out, mark as DISABLED
+                                if (soldQty >= limitedQty) {
+                                        status = "DISABLED";
+                                } else {
+                                        status = "ACTIVE";
+                                }
                         }
 
                         bw.write(String.join(",",
@@ -755,17 +890,22 @@ public class DataGenerator {
                         paymentCounter++;
                         String id = "PAY" + String.format("%06d", paymentCounter);
 
-                        LocalDateTime createdAt = randomDateTime();
-                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
+                        // Ensure payment time is after order createdAt
+                        LocalDateTime orderCreated = orderCreatedAtMap.getOrDefault(orderId, randomDateTime());
+                        LocalDateTime paymentTime = orderCreated.plusMinutes(1 + random.nextInt(60 * 24));
+                        LocalDateTime updatedAt = randomUpdatedAt(paymentTime);
 
                         String customerId = orderCustomerMap.get(orderId);
                         double amount = orderTotalMap.get(orderId);
 
                         String paymentMethod = PAYMENT_METHODS[random.nextInt(PAYMENT_METHODS.length)];
 
+                        // Record payment time for transactions
+                        orderPaymentTimeMap.put(orderId, paymentTime);
+
                         bw.write(String.join(",",
                                         id,
-                                        createdAt.format(formatter),
+                                        paymentTime.format(formatter),
                                         updatedAt.format(formatter),
                                         orderId,
                                         customerId,
@@ -799,7 +939,9 @@ public class DataGenerator {
                         txCounter++;
                         String id = "TX" + String.format("%06d", txCounter);
 
-                        LocalDateTime createdAt = randomDateTime();
+                        // Prefer transaction time after payment, else after order createdAt
+                        LocalDateTime baseTime = orderPaymentTimeMap.getOrDefault(orderId, orderCreatedAtMap.getOrDefault(orderId, randomDateTime()));
+                        LocalDateTime createdAt = baseTime.plusSeconds(random.nextInt(3600));
                         LocalDateTime updatedAt = randomUpdatedAt(createdAt);
 
                         String threadName = THREAD_NAMES[random.nextInt(THREAD_NAMES.length)];

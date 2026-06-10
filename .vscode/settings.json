@@ -1,0 +1,13 @@
+{
+    "java.import.maven.enabled": false,
+    "java.project.sourcePaths": [
+        "src",
+        "src/test"
+    ],
+    "java.project.outputPath": "bin",
+    "java.project.referencedLibraries": [
+        "lib/junit-platform-console-standalone-1.10.2.jar"
+    ],
+    "java.test.editor.enableShortcuts": true,
+    "java.configuration.updateBuildConfiguration": "automatic"
+}

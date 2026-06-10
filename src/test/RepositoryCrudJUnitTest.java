@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.util.List;
 import model.BaseEntity.BaseEntity;
 import model.Entity.Customer;
 import model.Entity.FlashSaleEvent;
@@ -340,9 +341,9 @@ public class RepositoryCrudJUnitTest {
                 + userRows;
         double rowsPerSecond = totalRows / (elapsedNs / 1_000_000_000.0);
 
-        printReadTime("Total rows read   : " + totalRows);
-        printReadTime("Total elapsed ms  : " + elapsedMs);
-        printReadTime("Total rows/second : "
+        System.out.println("Total rows read   : " + totalRows);
+        System.out.println("Total elapsed ms  : " + elapsedMs);
+        System.out.println("Total rows/second : "
                 + String.format("%.2f", rowsPerSecond));
 
         assertTrue(totalRows > 0, "Expected at least one row across CSV files");
@@ -409,6 +410,32 @@ public class RepositoryCrudJUnitTest {
         );
     }
 
+    private static void writeProductRows(String filePath, int count)
+            throws IOException {
+
+        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(filePath))) {
+            writer.write("id,createdAt,updatedAt,name,category,originalPrice,"
+                    + "stockQty,version,status");
+            writer.newLine();
+
+            for (int i = 1; i <= count; i++) {
+                Product product = new Product(
+                        "P" + String.format("%05d", i),
+                        CREATED_AT,
+                        UPDATED_AT,
+                        "Product " + i,
+                        "Category",
+                        1000.0 + i,
+                        100 + i,
+                        1,
+                        SaleStatus.ACTIVE);
+
+                writer.write(product.toCsvLine());
+                writer.newLine();
+            }
+        }
+    }
+
     private static String testFile(String fileName) {
         return TEST_DIR.resolve(fileName).toString();
     }
@@ -418,15 +445,10 @@ public class RepositoryCrudJUnitTest {
         int rows = reader.read();
         long elapsedMs = (System.nanoTime() - startNs) / 1_000_000;
 
-        printReadTime(fileName + " rows=" + rows
+        System.out.println(fileName + " rows=" + rows
                 + ", elapsedMs=" + elapsedMs);
 
         return rows;
-    }
-
-    private static void printReadTime(String message) {
-        System.err.println("[CSV READ TIME] " + message);
-        System.err.flush();
     }
 
     private interface RowReader {

@@ -44,7 +44,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
 
         List<FlashSaleItem> items = findAll();
 
-        FlashSaleItem item = findById( flashItemId);
+        FlashSaleItem item = findInList(items, flashItemId);
 
         if (item == null) {
             return false;
@@ -89,7 +89,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
 
         List<FlashSaleItem> items = findAll();
 
-        FlashSaleItem item = findById( flashItemId);
+        FlashSaleItem item = findInList(items, flashItemId);
 
         if (item == null) {
             return false;
@@ -132,19 +132,17 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             List<FlashSaleItem> items = new java.util.ArrayList<>();
 
             raf.seek(0);
-            try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(raf.getFD())))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (line.trim().isEmpty()) continue;
-                    if (line.startsWith("id,")) continue; // header
+            String line;
+            while ((line = raf.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                if (line.startsWith("id,")) continue; // header
 
-                    try {
-                        FlashSaleItem it = new FlashSaleItem();
-                        it.fromCsvLine(line);
-                        items.add(it);
-                    } catch (Exception e) {
-                        // skip malformed lines
-                    }
+                try {
+                    FlashSaleItem it = new FlashSaleItem();
+                    it.fromCsvLine(line);
+                    items.add(it);
+                } catch (Exception e) {
+                    // skip malformed lines
                 }
             }
 
@@ -169,16 +167,13 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             // rewrite file while still holding the lock
             raf.setLength(0);
             raf.seek(0);
-            try (java.io.BufferedWriter writer = new java.io.BufferedWriter(new java.io.OutputStreamWriter(new java.io.FileOutputStream(raf.getFD())))) {
-                // write header
-                writer.write("id,createdAt,updatedAt,eventId,productId,flashPrice,limitedQty,soldQty,discountPercent,version,status");
-                writer.newLine();
 
-                for (FlashSaleItem it : items) {
-                    writer.write(it.toCsvLine());
-                    writer.newLine();
-                }
-                writer.flush();
+            raf.writeBytes("id,createdAt,updatedAt,eventId,productId,flashPrice,limitedQty,soldQty,discountPercent,version,status");
+            raf.writeBytes(System.lineSeparator());
+
+            for (FlashSaleItem it : items) {
+                raf.writeBytes(it.toCsvLine());
+                raf.writeBytes(System.lineSeparator());
             }
 
             return true;
@@ -235,7 +230,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
              */
             List<FlashSaleItem> latestItems = findAll();
 
-            FlashSaleItem latestItem = findById(flashItemId);
+            FlashSaleItem latestItem = findInList(latestItems, flashItemId);
 
             /*
             If latestItem is missing (due to transient file parse errors),
@@ -283,5 +278,14 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
 
         // nếu retry vượt mức, báo lỗi rõ ràng
         throw new VersionConflictException("Optimistic lock failed after " + MAX_RETRY + " retries for " + flashItemId);
+    }
+    private FlashSaleItem findInList(List<FlashSaleItem> items, String flashItemId) {
+        for (FlashSaleItem item : items) {
+            if (item.getId().equals(flashItemId)) {
+                return item;
+            }
+        }
+
+        return null;
     }
 }

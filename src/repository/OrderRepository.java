@@ -13,6 +13,10 @@ public class OrderRepository extends CsvRepository<Order> {
     public OrderRepository() {
         super("data/orders.csv");
     }
+
+    public OrderRepository(String filePath) {
+        super(filePath);
+    }
     // --- Quản lý Event ---
 
     @Override

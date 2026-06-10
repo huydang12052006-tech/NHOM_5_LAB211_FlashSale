@@ -14,9 +14,15 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
     
     private static final String FILE_PATH = "data/flash_items.csv";
     private static final int MAX_RETRY = 3;
+    private final String lockFilePath;
 
     public FlashSaleItemRepository() {
-        super("data/flash_items.csv");
+        this(FILE_PATH);
+    }
+
+    public FlashSaleItemRepository(String filePath) {
+        super(filePath);
+        this.lockFilePath = filePath;
     }
     // --- Quản lý Item ---
 
@@ -118,7 +124,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
         FileLock lock = null;
 
         try {
-            raf = new RandomAccessFile(FILE_PATH, "rw");
+            raf = new RandomAccessFile(lockFilePath, "rw");
             channel = raf.getChannel();
             lock = channel.lock();
 

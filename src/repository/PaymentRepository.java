@@ -7,6 +7,10 @@ public class PaymentRepository extends CsvRepository<Payment> {
     public PaymentRepository() {
         super("data/payments.csv");
     }
+
+    public PaymentRepository(String filePath) {
+        super(filePath);
+    }
     // --- Quản lý Event ---
 
     @Override

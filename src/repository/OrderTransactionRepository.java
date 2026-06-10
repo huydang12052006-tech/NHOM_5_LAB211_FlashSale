@@ -5,7 +5,11 @@ import model.Entity.OrderTransaction;
 public class OrderTransactionRepository extends CsvRepository<OrderTransaction> {
 
     public OrderTransactionRepository() {
-        super("data/order_transactions.csv");
+        super("data/transactions.csv");
+    }
+
+    public OrderTransactionRepository(String filePath) {
+        super(filePath);
     }
     // --- Quản lý Event ---
 

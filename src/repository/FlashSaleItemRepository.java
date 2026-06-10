@@ -8,6 +8,8 @@ import java.nio.channels.FileLock;
 
 import java.util.List;
 
+import exception.*;
+
 public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
     
     private static final String FILE_PATH = "data/flash_items.csv";
@@ -32,7 +34,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
     }
 
     public boolean sellWithNoLock(String flashItemId,
-            int quantity) throws IOException {
+            int quantity) throws IOException, FlashSaleException {
 
         List<FlashSaleItem> items = findAll();
 
@@ -72,12 +74,12 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             return true;
         }
 
-        return false;
+        throw new OutOfStockException("Not enough stock for " + flashItemId);
     }
 
     public synchronized boolean sellWithSynchronized(String flashItemId,
             int quantity)
-            throws IOException {
+            throws IOException, FlashSaleException {
 
         List<FlashSaleItem> items = findAll();
 
@@ -93,7 +95,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
         tại cùng thời điểm
          */
         if (item.getSoldQty() + quantity > item.getLimitedQty()) {
-            return false;
+            throw new OutOfStockException("Not enough stock for " + flashItemId);
         }
 
         item.setSoldQty(item.getSoldQty() + quantity);
@@ -105,40 +107,91 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
 
     public boolean sellWithFileLock(String flashItemId,
             int quantity)
-            throws IOException {
+            throws IOException, FlashSaleException {
 
         /*
-        FileLock khóa trực tiếp file CSV
-        cấp OS level
+        Acquire an OS-level file lock and perform read/update/write while
+        holding the lock to avoid external writers causing IO exceptions on Windows.
          */
-        try (
-                RandomAccessFile raf
-                = new RandomAccessFile(FILE_PATH, "rw"); FileChannel channel = raf.getChannel(); 
-                FileLock lock = channel.lock()) {
+        RandomAccessFile raf = null;
+        FileChannel channel = null;
+        FileLock lock = null;
 
-            List<FlashSaleItem> items = findAll();
+        try {
+            raf = new RandomAccessFile(FILE_PATH, "rw");
+            channel = raf.getChannel();
+            lock = channel.lock();
 
-            FlashSaleItem item = findById( flashItemId);
+            // Read all lines using the opened file descriptor while holding the lock
+            List<FlashSaleItem> items = new java.util.ArrayList<>();
 
-            if (item == null) {
+            raf.seek(0);
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(raf.getFD())))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.trim().isEmpty()) continue;
+                    if (line.startsWith("id,")) continue; // header
+
+                    try {
+                        FlashSaleItem it = new FlashSaleItem();
+                        it.fromCsvLine(line);
+                        items.add(it);
+                    } catch (Exception e) {
+                        // skip malformed lines
+                    }
+                }
+            }
+
+            FlashSaleItem target = null;
+            for (FlashSaleItem it : items) {
+                if (it.getId().equals(flashItemId)) {
+                    target = it;
+                    break;
+                }
+            }
+
+            if (target == null) {
                 return false;
             }
 
-            if (item.getSoldQty() + quantity > item.getLimitedQty()) {
-                return false;
+            if (target.getSoldQty() + quantity > target.getLimitedQty()) {
+                throw new OutOfStockException("Not enough stock for " + flashItemId);
             }
 
-            item.setSoldQty(item.getSoldQty() + quantity);
+            target.setSoldQty(target.getSoldQty() + quantity);
 
-            rewriteFile(items);
+            // rewrite file while still holding the lock
+            raf.setLength(0);
+            raf.seek(0);
+            try (java.io.BufferedWriter writer = new java.io.BufferedWriter(new java.io.OutputStreamWriter(new java.io.FileOutputStream(raf.getFD())))) {
+                // write header
+                writer.write("id,createdAt,updatedAt,eventId,productId,flashPrice,limitedQty,soldQty,discountPercent,version,status");
+                writer.newLine();
+
+                for (FlashSaleItem it : items) {
+                    writer.write(it.toCsvLine());
+                    writer.newLine();
+                }
+                writer.flush();
+            }
 
             return true;
+        } finally {
+            try {
+                if (lock != null && lock.isValid()) lock.release();
+            } catch (IOException ignored) {}
+            try {
+                if (channel != null) channel.close();
+            } catch (IOException ignored) {}
+            try {
+                if (raf != null) raf.close();
+            } catch (IOException ignored) {}
         }
     }
 
     public boolean sellWithOptimisticLock(String flashItemId,
             int quantity)
-            throws IOException {
+            throws IOException, FlashSaleException {
 
         int retry = 0;
 
@@ -159,7 +212,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             validate stock
              */
             if (currentSold + quantity > item.getLimitedQty()) {
-                return false;
+                throw new OutOfStockException("Not enough stock for " + flashItemId);
             }
 
             /*
@@ -213,6 +266,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             return true;
         }
 
-        return false;
+        // nếu retry vượt mức, báo lỗi rõ ràng
+        throw new VersionConflictException("Optimistic lock failed after " + MAX_RETRY + " retries for " + flashItemId);
     }
 }

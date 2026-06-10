@@ -229,15 +229,24 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
              */
             List<FlashSaleItem> latestItems = findAll();
 
-            FlashSaleItem latestItem
-                    = findById(  flashItemId);
+            FlashSaleItem latestItem = findById(flashItemId);
+
+            /*
+            If latestItem is missing (due to transient file parse errors),
+            treat as version conflict and retry.
+             */
+            if (latestItem == null) {
+                retry++;
+                System.out.println(Thread.currentThread().getName()
+                        + " latestItem=null -> retry " + retry);
+                continue;
+            }
 
             /*
             version changed
             => thread khác đã update trước
              */
             if (latestItem.getVersion() != currentVersion) {
-
                 retry++;
 
                 System.out.println(

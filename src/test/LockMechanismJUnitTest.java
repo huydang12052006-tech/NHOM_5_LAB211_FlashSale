@@ -100,6 +100,28 @@ public class LockMechanismJUnitTest {
     }
 
     @Test
+    void noLockAllowsTwoThreadsToSellSameLastStock()
+            throws Exception {
+
+        FlashSaleItemRepository repository =
+                prepareRepository("no_lock_concurrent.csv", 0, 6, 1);
+
+        ConcurrentResult result = runTwoConcurrentSales(
+                new SaleAction() {
+                    @Override
+                    public boolean sell() throws Exception {
+                        return repository.sellWithNoLock("FI_LOCK", 6);
+                    }
+                }
+        );
+
+        assertEquals(2, result.successCount.get());
+        assertEquals(0, result.expectedFailures.size());
+        assertEquals(0, result.unexpectedFailures.size());
+        assertFlashItemState(repository, 6, 1);
+    }
+
+    @Test
     void synchronizedLockDoesNotOversellWhenTwoThreadsBuySameLastStock()
             throws Exception {
 

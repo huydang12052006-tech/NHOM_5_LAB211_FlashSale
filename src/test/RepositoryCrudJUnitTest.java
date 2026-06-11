@@ -70,13 +70,13 @@ public class RepositoryCrudJUnitTest {
                 testFile("customers.csv"),
                 "customers.csv",
                 new Customer("JUNIT_C001", CREATED_AT, UPDATED_AT,
-                        "Nguyen Van A", "0909123456", "a@example.com",
+                        "JUNIT_U001", "Nguyen Van A", "0909123456", "a@example.com",
                         CustomerTier.NORMAL, 1000.0, true),
                 new Customer("JUNIT_C002", CREATED_AT, UPDATED_AT,
-                        "Tran Thi B", "0911222333", "b@example.com",
+                        "JUNIT_U002", "Tran Thi B", "0911222333", "b@example.com",
                         CustomerTier.VIP, 2000.0, true),
                 new Customer("JUNIT_C002", CREATED_AT, UPDATED_AT,
-                        "Tran Thi B Updated", "0911222333", "b@example.com",
+                        "JUNIT_U002", "Tran Thi B Updated", "0911222333", "b@example.com",
                         CustomerTier.PREMIUM, 3000.0, false));
     }
 

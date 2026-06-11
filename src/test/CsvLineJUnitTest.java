@@ -31,12 +31,12 @@ public class CsvLineJUnitTest {
     void customerToCsvLine() {
         Customer customer = new Customer(
                 "C001", CREATED_AT, UPDATED_AT,
-                "Nguyen, Van A", "0909123456", "a@example.com",
+                "U001", "Nguyen, Van A", "0909123456", "a@example.com",
                 CustomerTier.VIP, 12345.5, true);
 
         assertEquals(
                 "C001,2026-01-02T03:04:05,2026-02-03T04:05:06,"
-                        + "Nguyen  Van A,0909123456,a@example.com,VIP,12345.5,true",
+                        + "U001,Nguyen  Van A,0909123456,a@example.com,VIP,12345.5,true",
                 customer.toCsvLine()
         );
     }
@@ -46,9 +46,10 @@ public class CsvLineJUnitTest {
         Customer customer = new Customer();
         customer.fromCsvLine(
                 "C002,2026-01-02T03:04:05,2026-02-03T04:05:06,"
-                        + "Tran Van B,0911222333,b@example.com,PREMIUM,999.75,false");
+                        + "U002,Tran Van B,0911222333,b@example.com,PREMIUM,999.75,false");
 
         assertBaseFields(customer, "C002");
+        assertEquals("U002", customer.getUserId());
         assertEquals("Tran Van B", customer.getFullName());
         assertEquals("0911222333", customer.getPhone());
         assertEquals("b@example.com", customer.getEmail());

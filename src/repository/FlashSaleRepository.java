@@ -8,6 +8,10 @@ public class FlashSaleRepository extends CsvRepository<FlashSaleEvent> {
     public FlashSaleRepository() {
         super("data/flash_events.csv");
     }
+
+    public FlashSaleRepository(String filePath) {
+        super(filePath);
+    }
     // --- Quản lý Event ---
 
     @Override

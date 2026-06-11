@@ -10,6 +10,10 @@ public class ProductRepository extends CsvRepository<Product> {
         super("data/products.csv");
     }
 
+    public ProductRepository(String filePath) {
+        super(filePath);
+    }
+
     @Override
     protected Product mapFromCsv(String csvLine) {
 

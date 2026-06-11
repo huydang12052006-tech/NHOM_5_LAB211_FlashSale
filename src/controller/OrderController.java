@@ -12,6 +12,8 @@ package controller;
 import exception.InvalidQuantityException;
 import exception.OutOfStockException;
 import exception.PurchaseLimitExceededException;
+import exception.FlashSaleException;
+import java.io.IOException;
 
 import model.Entity.Customer;
 import model.Entity.FlashSaleItem;
@@ -50,7 +52,7 @@ public class OrderController {
                               String flashItemId,
                               int quantity,
                               LockMechanism mechanism)
-            throws Exception {
+            throws IOException, FlashSaleException {
 
         // =========================
         // VALIDATE QUANTITY
@@ -72,7 +74,7 @@ public class OrderController {
 
         if (customer == null) {
 
-            throw new IllegalArgumentException(
+            throw new FlashSaleException(
                     "Customer not found"
             );
         }
@@ -86,7 +88,7 @@ public class OrderController {
 
         if (flashItem == null) {
 
-            throw new IllegalArgumentException(
+            throw new FlashSaleException(
                     "FlashSaleItem not found"
             );
         }
@@ -164,7 +166,7 @@ public class OrderController {
                 break;
 
             default:
-                throw new IllegalArgumentException("Unknown lock mechanism");
+                throw new FlashSaleException("Unknown lock mechanism");
         }
 
         return result;

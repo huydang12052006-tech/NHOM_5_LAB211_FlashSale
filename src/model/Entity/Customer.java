@@ -9,6 +9,8 @@ import model.BaseEntity.BaseEntity;
 
 public class Customer extends BaseEntity {
 
+    private String userId;
+
     private String fullName;
 
     private String phone;
@@ -31,6 +33,7 @@ public class Customer extends BaseEntity {
     public Customer(String id,
                     LocalDateTime createdAt,
                     LocalDateTime updatedAt,
+                    String userId,
                     String fullName,
                     String phone,
                     String email,
@@ -40,6 +43,7 @@ public class Customer extends BaseEntity {
 
         super(id,createdAt,updatedAt);
 
+        this.userId = userId;
         this.fullName = fullName;
         this.phone = phone;
         this.email = email;
@@ -51,6 +55,14 @@ public class Customer extends BaseEntity {
     // =========================
     // Getter & Setter
     // =========================
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
 
     public String getFullName() {
         return fullName;
@@ -111,6 +123,7 @@ public class Customer extends BaseEntity {
                 escapeCsv(getId()),
                 formatDateTime(getCreatedAt()),
                 formatDateTime(getUpdatedAt()),
+                escapeCsv(userId),
                 escapeCsv(fullName),
                 escapeCsv(phone),
                 escapeCsv(email),
@@ -124,6 +137,7 @@ public class Customer extends BaseEntity {
     public void fromCsvLine(String csv) {
 
         String[] parts = csv.split(",", -1);
+        int offset = parts.length >= 10 ? 1 : 0;
 
         setId(parts[0]);
 
@@ -135,20 +149,22 @@ public class Customer extends BaseEntity {
                 LocalDateTime.parse(parts[2])
         );
 
-        this.fullName = parts[3];
+        this.userId = offset == 1 ? parts[3] : null;
 
-        this.phone = parts[4];
+        this.fullName = parts[3 + offset];
 
-        this.email = parts[5];
+        this.phone = parts[4 + offset];
+
+        this.email = parts[5 + offset];
 
         this.tier =
-                CustomerTier.valueOf(parts[6]);
+                CustomerTier.valueOf(parts[6 + offset]);
 
         this.totalSpent =
-                Double.parseDouble(parts[7]);
+                Double.parseDouble(parts[7 + offset]);
 
         this.active =
-                Boolean.parseBoolean(parts[8]);
+                Boolean.parseBoolean(parts[8 + offset]);
     }
 
     // =========================
@@ -160,6 +176,7 @@ public class Customer extends BaseEntity {
 
         return "Customer{" +
                 "id='" + getId() + '\'' +
+                ", userId='" + userId + '\'' +
                 ", fullName='" + fullName + '\'' +
                 ", phone='" + phone + '\'' +
                 ", email='" + email + '\'' +

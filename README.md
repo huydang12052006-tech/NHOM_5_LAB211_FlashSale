@@ -465,9 +465,9 @@ Throughput Reduction < 30%
 ## 👨‍💻 THÀNH VIÊN NHÓM (GROUP 5)
 | STT | Họ và Tên | Vai trò |
 |-----|-----------|---------|
-| 1   | Đinh Thien Nhan | Dev A: Product & Flash Sale Module |
-| 2   | Pham Phuong Thao | Dev B: Order & Concurrency Module |
-| 3   | Nguyen Dang Huy | Dev C: Simulator & Research Module |
-| 4   | Do Tan Vu | Dev D: Authentication & Payment Module |
+| 1   | Đinh Thien Nhan | Product & Flash Sale Module |
+| 2   | Pham Phuong Thao | Order & Concurrency Module |
+| 3   | Nguyen Dang Huy | Simulator & Research Module |
+| 4   | Do Tan Vu | Authentication & Payment Module |
 
 

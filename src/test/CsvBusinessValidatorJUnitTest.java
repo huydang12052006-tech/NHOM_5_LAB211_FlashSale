@@ -40,6 +40,18 @@ public class CsvBusinessValidatorJUnitTest {
                     "FK_ORDER_EVENT -> " + order.id);
         }
 
+        for (Customer customer : dataset.customers.values()) {
+            User user = dataset.users.get(customer.userId);
+            check(user != null, errors,
+                    "FK_CUSTOMER_USER -> " + customer.id);
+            if (user != null) {
+                check("CUSTOMER".equals(user.role), errors,
+                        "CUSTOMER_USER_ROLE -> " + customer.id
+                                + " userId=" + customer.userId
+                                + " role=" + user.role);
+            }
+        }
+
         for (OrderDetail detail : dataset.orderDetails) {
             check(dataset.orders.containsKey(detail.orderId), errors,
                     "FK_DETAIL_ORDER -> " + detail.id);
@@ -259,6 +271,7 @@ public class CsvBusinessValidatorJUnitTest {
         private final Map<String, Product> products = new HashMap<>();
         private final Map<String, Event> events = new HashMap<>();
         private final Map<String, FlashItem> flashItems = new HashMap<>();
+        private final Map<String, User> users = new HashMap<>();
         private final Map<String, Customer> customers = new HashMap<>();
         private final Map<String, Order> orders = new HashMap<>();
         private final List<OrderDetail> orderDetails = new ArrayList<>();
@@ -270,6 +283,7 @@ public class CsvBusinessValidatorJUnitTest {
             dataset.loadProducts();
             dataset.loadEvents();
             dataset.loadFlashItems();
+            dataset.loadUsers();
             dataset.loadCustomers();
             dataset.loadOrders();
             dataset.loadOrderDetails();
@@ -308,11 +322,21 @@ public class CsvBusinessValidatorJUnitTest {
             }
         }
 
+        private void loadUsers() throws Exception {
+            for (String[] s : readCsv("users.csv")) {
+                User user = new User();
+                user.id = s[0];
+                user.role = s[5];
+                users.put(user.id, user);
+            }
+        }
+
         private void loadCustomers() throws Exception {
             for (String[] s : readCsv("customers.csv")) {
                 Customer customer = new Customer();
                 customer.id = s[0];
-                customer.totalSpent = Long.parseLong(s[7]);
+                customer.userId = s[3];
+                customer.totalSpent = Long.parseLong(s[8]);
                 customers.put(customer.id, customer);
             }
         }
@@ -395,7 +419,13 @@ public class CsvBusinessValidatorJUnitTest {
 
     private static class Customer {
         private String id;
+        private String userId;
         private long totalSpent;
+    }
+
+    private static class User {
+        private String id;
+        private String role;
     }
 
     private static class Order {

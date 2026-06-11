@@ -409,31 +409,7 @@ public class RepositoryCrudJUnitTest {
         );
     }
 
-    private static void writeProductRows(String filePath, int count)
-            throws IOException {
-
-        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(filePath))) {
-            writer.write("id,createdAt,updatedAt,name,category,originalPrice,"
-                    + "stockQty,version,status");
-            writer.newLine();
-
-            for (int i = 1; i <= count; i++) {
-                Product product = new Product(
-                        "P" + String.format("%05d", i),
-                        CREATED_AT,
-                        UPDATED_AT,
-                        "Product " + i,
-                        "Category",
-                        1000.0 + i,
-                        100 + i,
-                        1,
-                        SaleStatus.ACTIVE);
-
-                writer.write(product.toCsvLine());
-                writer.newLine();
-            }
-        }
-    }
+    
 
     private static String testFile(String fileName) {
         return TEST_DIR.resolve(fileName).toString();

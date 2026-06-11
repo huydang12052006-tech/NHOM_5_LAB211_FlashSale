@@ -166,6 +166,9 @@ public class DataGenerator {
         // customerId -> totalSpent (sum of order totalAmounts for SUCCESS orders)
         private static final Map<String, Double> customerSpentMap = new HashMap<>();
 
+        // userId -> customer fullName, used to keep usernames aligned with customers
+        private static final Map<String, String> customerFullNameByUserId = new HashMap<>();
+
         // orderId -> customerId
         private static final Map<String, String> orderCustomerMap = new HashMap<>();
 
@@ -201,7 +204,7 @@ public class DataGenerator {
         private static final int NUM_FLASH_ITEMS = 1000;
         private static final int NUM_CUSTOMERS = 2500;
         private static final int NUM_ORDERS = 3000;
-        private static final int NUM_USERS = 200;
+        private static final int NUM_USERS = NUM_CUSTOMERS + 100;
 
         public static void main(String[] args) {
 
@@ -225,10 +228,10 @@ public class DataGenerator {
                         // Phase 5: Update FlashItems CSV with correct soldQty
                         rewriteFlashItemsWithSoldQty();
 
-                        // Phase 6: Rewrite Customers with correct totalSpent and tier
+                        // Phase 6: Rewrite Customers with correct userId, totalSpent and tier
                         rewriteCustomersWithSpent();
 
-                        // Phase 7: Generate Users CSV
+                        // Phase 7: Generate Users CSV using the linked customer names
                         generateUsers(NUM_USERS);
 
                         // Phase 8: Generate Payments CSV (one per SUCCESS order)
@@ -766,17 +769,19 @@ public class DataGenerator {
 
                 BufferedWriter bw = new BufferedWriter(new FileWriter("data/customers.csv"));
 
-                bw.write("id,createdAt,updatedAt,fullName,phone,email,tier,totalSpent,active");
+                bw.write("id,createdAt,updatedAt,userId,fullName,phone,email,tier,totalSpent,active");
                 bw.newLine();
 
                 for (int i = 1; i <= NUM_CUSTOMERS; i++) {
 
                         String id = "C" + String.format("%05d", i);
+                        String userId = "U" + String.format("%05d", i);
 
                         LocalDateTime createdAt = randomDateTime();
                         LocalDateTime updatedAt = randomUpdatedAt(createdAt);
 
                         String fullName = randomFullName();
+                        customerFullNameByUserId.put(userId, fullName);
 
                         String email = createEmail(fullName, i);
 
@@ -800,6 +805,7 @@ public class DataGenerator {
                                         id,
                                         createdAt.format(formatter),
                                         updatedAt.format(formatter),
+                                        userId,
                                         fullName,
                                         phone,
                                         email,
@@ -831,20 +837,19 @@ public class DataGenerator {
                         LocalDateTime createdAt = randomDateTime();
                         LocalDateTime updatedAt = randomUpdatedAt(createdAt);
 
-                        String username = "user" + i;
+                        String fullName = customerFullNameByUserId.get(id);
+                        String username = createUsername(
+                                        fullName != null ? fullName : randomFullName(),
+                                        i);
 
                         // Simulated bcrypt-style hash
                         String passwordHash = "$2a$10$" + randomAlphanumeric(53);
 
-                        // Role distribution: 80% CUSTOMER, 15% SELLER, 5% ADMIN
                         String role;
-                        int roleRoll = random.nextInt(100);
-                        if (roleRoll < 80) {
+                        if (i <= NUM_CUSTOMERS) {
                                 role = "CUSTOMER";
-                        } else if (roleRoll < 95) {
-                                role = "SELLER";
                         } else {
-                                role = "ADMIN";
+                                role = random.nextInt(100) < 75 ? "SELLER" : "ADMIN";
                         }
 
                         boolean active = random.nextInt(10) < 9; // 90% active
@@ -1045,6 +1050,15 @@ public class DataGenerator {
                                 .replace(" ", ".");
 
                 return email + number + "@gmail.com";
+        }
+
+        private static String createUsername(String fullName, int number) {
+
+                String[] parts = fullName.toLowerCase().split("\\s+");
+                String firstName = parts[0];
+                String lastName = parts[parts.length - 1];
+
+                return firstName + "." + lastName + number;
         }
 
         /**

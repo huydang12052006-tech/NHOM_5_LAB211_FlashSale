@@ -24,28 +24,26 @@ public class CsvBusinessValidatorJUnitTest {
 
     @Test
     void foreignKeysAreValid() {
-        List<String> errors = new ArrayList<>();
-
         for (FlashItem item : dataset.flashItems.values()) {
-            check(dataset.events.containsKey(item.eventId), errors,
+            assertTrue(dataset.events.containsKey(item.eventId),
                     "FK_FLASHITEM_EVENT -> " + item.id);
-            check(dataset.products.containsKey(item.productId), errors,
+            assertTrue(dataset.products.containsKey(item.productId),
                     "FK_FLASHITEM_PRODUCT -> " + item.id);
         }
 
         for (Order order : dataset.orders.values()) {
-            check(dataset.customers.containsKey(order.customerId), errors,
+            assertTrue(dataset.customers.containsKey(order.customerId),
                     "FK_ORDER_CUSTOMER -> " + order.id);
-            check(dataset.events.containsKey(order.eventId), errors,
+            assertTrue(dataset.events.containsKey(order.eventId),
                     "FK_ORDER_EVENT -> " + order.id);
         }
 
         for (Customer customer : dataset.customers.values()) {
             User user = dataset.users.get(customer.userId);
-            check(user != null, errors,
+            assertTrue(user != null,
                     "FK_CUSTOMER_USER -> " + customer.id);
             if (user != null) {
-                check("CUSTOMER".equals(user.role), errors,
+                assertTrue("CUSTOMER".equals(user.role),
                         "CUSTOMER_USER_ROLE -> " + customer.id
                                 + " userId=" + customer.userId
                                 + " role=" + user.role);
@@ -53,50 +51,43 @@ public class CsvBusinessValidatorJUnitTest {
         }
 
         for (OrderDetail detail : dataset.orderDetails) {
-            check(dataset.orders.containsKey(detail.orderId), errors,
+            assertTrue(dataset.orders.containsKey(detail.orderId),
                     "FK_DETAIL_ORDER -> " + detail.id);
-            check(dataset.flashItems.containsKey(detail.flashItemId), errors,
+            assertTrue(dataset.flashItems.containsKey(detail.flashItemId),
                     "FK_DETAIL_FLASHITEM -> " + detail.id);
         }
 
         for (Payment payment : dataset.payments) {
-            check(dataset.orders.containsKey(payment.orderId), errors,
+            assertTrue(dataset.orders.containsKey(payment.orderId),
                     "FK_PAYMENT_ORDER -> " + payment.id);
-            check(dataset.customers.containsKey(payment.customerId), errors,
+            assertTrue(dataset.customers.containsKey(payment.customerId),
                     "FK_PAYMENT_CUSTOMER -> " + payment.id);
         }
 
         for (Transaction transaction : dataset.transactions) {
-            check(dataset.orders.containsKey(transaction.orderId), errors,
+            assertTrue(dataset.orders.containsKey(transaction.orderId),
                     "FK_TRANSACTION_ORDER -> " + transaction.id);
         }
-
-        assertNoErrors(errors);
     }
 
     @Test
     void flashSaleRulesAreValid() {
-        List<String> errors = new ArrayList<>();
-
         for (FlashItem item : dataset.flashItems.values()) {
             Product product = dataset.products.get(item.productId);
             if (product == null) {
                 continue;
             }
 
-            check(item.flashPrice < product.originalPrice, errors,
+            assertTrue(item.flashPrice < product.originalPrice,
                     "FLASH_PRICE_LT_ORIGINAL -> " + item.id);
-            check(item.soldQty <= item.limitedQty, errors,
+            assertTrue(item.soldQty <= item.limitedQty,
                     "SOLD_QTY_LIMIT -> " + item.id);
         }
-
-        assertNoErrors(errors);
     }
 
     @Test
     void orderTotalsMatchDetails() {
         Map<String, Long> totals = new HashMap<>();
-        List<String> errors = new ArrayList<>();
 
         for (OrderDetail detail : dataset.orderDetails) {
             totals.merge(detail.orderId, detail.subTotal, Long::sum);
@@ -104,19 +95,16 @@ public class CsvBusinessValidatorJUnitTest {
 
         for (Order order : dataset.orders.values()) {
             long expected = totals.getOrDefault(order.id, 0L);
-            check(expected == order.totalAmount, errors,
+            assertTrue(expected == order.totalAmount,
                     "ORDER_TOTAL -> " + order.id
                             + " expected=" + expected
                             + " actual=" + order.totalAmount);
         }
-
-        assertNoErrors(errors);
     }
 
     @Test
     void customerSpentMatchesSuccessfulOrders() {
         Map<String, Long> spent = new HashMap<>();
-        List<String> errors = new ArrayList<>();
 
         for (Order order : dataset.orders.values()) {
             if ("SUCCESS".equals(order.status)) {
@@ -126,19 +114,16 @@ public class CsvBusinessValidatorJUnitTest {
 
         for (Customer customer : dataset.customers.values()) {
             long expected = spent.getOrDefault(customer.id, 0L);
-            check(expected == customer.totalSpent, errors,
+            assertTrue(expected == customer.totalSpent,
                     "CUSTOMER_SPENT -> " + customer.id
                             + " expected=" + expected
                             + " actual=" + customer.totalSpent);
         }
-
-        assertNoErrors(errors);
     }
 
     @Test
     void soldQuantitiesMatchSuccessfulOrderDetails() {
         Map<String, Integer> sold = new HashMap<>();
-        List<String> errors = new ArrayList<>();
 
         for (OrderDetail detail : dataset.orderDetails) {
             Order order = dataset.orders.get(detail.orderId);
@@ -150,19 +135,16 @@ public class CsvBusinessValidatorJUnitTest {
 
         for (FlashItem item : dataset.flashItems.values()) {
             int expected = sold.getOrDefault(item.id, 0);
-            check(expected == item.soldQty, errors,
+            assertTrue(expected == item.soldQty,
                     "SOLD_QTY -> " + item.id
                             + " expected=" + expected
                             + " actual=" + item.soldQty);
         }
-
-        assertNoErrors(errors);
     }
 
     @Test
     void purchaseLimitIsNotExceeded() {
         Map<String, Integer> counter = new HashMap<>();
-        List<String> errors = new ArrayList<>();
 
         for (OrderDetail detail : dataset.orderDetails) {
             Order order = dataset.orders.get(detail.orderId);
@@ -178,59 +160,49 @@ public class CsvBusinessValidatorJUnitTest {
         }
 
         for (Map.Entry<String, Integer> entry : counter.entrySet()) {
-            check(entry.getValue() <= 2, errors,
+            assertTrue(entry.getValue() <= 2,
                     "MAX_2_RULE -> " + entry.getKey()
                             + " qty=" + entry.getValue());
         }
-
-        assertNoErrors(errors);
     }
 
     @Test
     void everyOrderHasDetail() {
         Set<String> orderIdsWithDetail = new HashSet<>();
-        List<String> errors = new ArrayList<>();
 
         for (OrderDetail detail : dataset.orderDetails) {
             orderIdsWithDetail.add(detail.orderId);
         }
 
         for (Order order : dataset.orders.values()) {
-            check(orderIdsWithDetail.contains(order.id), errors,
+            assertTrue(orderIdsWithDetail.contains(order.id),
                     "EMPTY_ORDER -> " + order.id);
         }
-
-        assertNoErrors(errors);
     }
 
     @Test
     void paymentAmountsMatchOrders() {
-        List<String> errors = new ArrayList<>();
-
         for (Payment payment : dataset.payments) {
             Order order = dataset.orders.get(payment.orderId);
             if (order == null) {
                 continue;
             }
 
-            check(payment.amount == order.totalAmount, errors,
+            assertTrue(payment.amount == order.totalAmount,
                     "PAYMENT_AMOUNT -> " + payment.id);
         }
-
-        assertNoErrors(errors);
     }
 
     @Test
     void timestampsAreInValidOrder() {
         Map<String, Payment> paymentMap = new HashMap<>();
-        List<String> errors = new ArrayList<>();
 
         for (Payment payment : dataset.payments) {
             paymentMap.put(payment.orderId, payment);
 
             Order order = dataset.orders.get(payment.orderId);
             if (order != null) {
-                check(!payment.createdAt.isBefore(order.createdAt), errors,
+                assertTrue(!payment.createdAt.isBefore(order.createdAt),
                         "PAYMENT_TIME -> " + payment.id);
             }
         }
@@ -238,22 +210,10 @@ public class CsvBusinessValidatorJUnitTest {
         for (Transaction transaction : dataset.transactions) {
             Payment payment = paymentMap.get(transaction.orderId);
             if (payment != null) {
-                check(!transaction.createdAt.isBefore(payment.createdAt), errors,
+                assertTrue(!transaction.createdAt.isBefore(payment.createdAt),
                         "TRANSACTION_TIME -> " + transaction.id);
             }
         }
-
-        assertNoErrors(errors);
-    }
-
-    private static void check(boolean ok, List<String> errors, String message) {
-        if (!ok) {
-            errors.add(message);
-        }
-    }
-
-    private static void assertNoErrors(List<String> errors) {
-        assertTrue(errors.isEmpty(), String.join(System.lineSeparator(), errors));
     }
 
     private static List<String[]> readCsv(String file) throws Exception {

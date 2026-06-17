@@ -34,7 +34,7 @@ public class ProductView {
 
         for (Product product : products) {
 
-            System.out.println(product);
+            System.out.println(product.toCsvLine());
         }
     }
 

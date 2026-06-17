@@ -1,8 +1,8 @@
 package controller;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import model.Entity.Product;
-import model.Enum.SaleStatus;
 import repository.ProductRepository;
 
 public class ProductController {
@@ -37,32 +37,15 @@ public class ProductController {
 
     public boolean deleteProduct(String id) {
 
-        Product targetProduct = null;
-
-        for (Product p : productRepository.findAll()) {
-
-            if (p.getId().equalsIgnoreCase(id)) {
-
-                targetProduct = p;
-
-                break;
-            }
-        }
-
-        if (targetProduct == null) {
+        if (id == null || id.trim().isEmpty()) {
             return false;
         }
 
-        targetProduct.setStatus(
-                SaleStatus.DISABLED
-        );
-
-        targetProduct.setUpdatedAt(
-                LocalDateTime.now()
-        );
-
-        return productRepository.update(
-                targetProduct
-        );
+        try {
+            return productRepository.delete(id.trim());
+        } catch (IOException e) {
+            System.out.println("[ERROR] " + e.getMessage());
+            return false;
+        }
     }
 }

@@ -1,4 +1,4 @@
-/*
+/*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
  */
@@ -8,6 +8,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -20,6 +22,7 @@ public class DataGenerator {
         private static final Random random = new Random();
 
         private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+
 
         private static final String[] FIRST_NAMES = {
                         "Nguyen", "Tran", "Le", "Pham", "Hoang",
@@ -842,8 +845,9 @@ public class DataGenerator {
                                         fullName != null ? fullName : randomFullName(),
                                         i);
 
-                        // Simulated bcrypt-style hash
-                        String passwordHash = "$2a$10$" + randomAlphanumeric(53);
+                        // Real SHA-256 hash: raw password is "pass" + id (e.g. "passU00001")
+                        String rawPassword = "pass" + id;
+                        String passwordHash = sha256Hash(rawPassword);
 
                         String role;
                         if (i <= NUM_CUSTOMERS) {
@@ -1063,7 +1067,7 @@ public class DataGenerator {
 
         /**
          * Generates a random alphanumeric string of the given length.
-         * Used for simulating password hashes.
+         * Used for random data generation (not password hashing).
          */
         private static String randomAlphanumeric(int length) {
 
@@ -1073,5 +1077,23 @@ public class DataGenerator {
                         sb.append(chars.charAt(random.nextInt(chars.length())));
                 }
                 return sb.toString();
+        }
+
+        /**
+         * Hashes the given raw text using SHA-256 and returns the hex string.
+         * Raw password convention: "pass" + userId (e.g. "passU00001").
+         */
+        private static String sha256Hash(String raw) {
+                try {
+                        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                        byte[] bytes = digest.digest(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        StringBuilder sb = new StringBuilder();
+                        for (byte b : bytes) {
+                                sb.append(String.format("%02x", b));
+                        }
+                        return sb.toString();
+                } catch (NoSuchAlgorithmException e) {
+                        throw new RuntimeException("SHA-256 not available", e);
+                }
         }
 }

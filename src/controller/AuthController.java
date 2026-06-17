@@ -1,5 +1,7 @@
 package controller;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -11,9 +13,7 @@ import view.AuthView;
 public class AuthController {
 
     private final UserRepository userRepository;
-
     private final AuthView authView;
-
     private User currentUser;
 
     public AuthController() {
@@ -58,7 +58,7 @@ public class AuthController {
                 now,
                 now,
                 username,
-                password,
+                sha256Hash(password),
                 UserRole.CUSTOMER,
                 true
         );
@@ -79,7 +79,7 @@ public class AuthController {
         }
 
         String newPassword = authView.inputNewPassword();
-        currentUser.setPasswordHash(newPassword);
+        currentUser.setPasswordHash(sha256Hash(newPassword));
         currentUser.setUpdatedAt(LocalDateTime.now());
 
         if (userRepository.update(currentUser)) {
@@ -106,7 +106,21 @@ public class AuthController {
     }
 
     private boolean passwordMatches(String rawPassword, String storedPassword) {
-        return storedPassword != null && storedPassword.equals(rawPassword);
+        return storedPassword != null && storedPassword.equals(sha256Hash(rawPassword));
+    }
+
+    private static String sha256Hash(String raw) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : bytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
     }
 
     private String generateUserId() {
@@ -122,5 +136,44 @@ public class AuthController {
         }
 
         return String.format("U%05d", maxNumber + 1);
+    }
+
+    public boolean approveAccount(String userId) {
+        User user = userRepository.findById(userId);
+        if (user == null) {
+            return false;
+        }
+        user.setActive(true);
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.update(user);
+    }
+
+    public boolean suspendAccount(String userId) {
+        User user = userRepository.findById(userId);
+        if (user == null) {
+            return false;
+        }
+        user.setActive(false);
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.update(user);
+    }
+
+    public User getUserById(String userId) {
+        return userRepository.findById(userId);
+    }
+
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public boolean updateUserAccount(String userId, String username, UserRole role) {
+        User user = userRepository.findById(userId);
+        if (user == null) {
+            return false;
+        }
+        user.setUsername(username);
+        user.setRole(role);
+        user.setUpdatedAt(LocalDateTime.now());
+        return userRepository.update(user);
     }
 }

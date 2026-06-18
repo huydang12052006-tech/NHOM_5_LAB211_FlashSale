@@ -37,15 +37,15 @@ public class ProductController {
 
     public boolean createProduct(Product newProduct) {
 
-        boolean idExists =
-                productRepository.findAll()
-                        .stream()
-                        .anyMatch(p ->
-                                p.getId()
-                                 .equalsIgnoreCase(
-                                         newProduct.getId()));
+        boolean exists = false;
 
-        if (idExists) {
+for (Product p : productRepository.findAll()) {
+if (p.getId().equalsIgnoreCase(newProduct.getId())) {
+exists = true;
+break;
+    }
+}
+        if (exists) {
             return false;
         }
 

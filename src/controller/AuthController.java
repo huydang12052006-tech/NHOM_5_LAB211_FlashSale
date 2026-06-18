@@ -5,8 +5,11 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import model.Entity.Customer;
 import model.Entity.User;
+import model.Enum.CustomerTier;
 import model.Enum.UserRole;
+import repository.CustomerRepository;
 import repository.UserRepository;
 import view.AuthView;
 
@@ -43,6 +46,24 @@ public class AuthController {
         return true;
     }
 
+    public User validateLogin() {
+        String username = authView.inputUsername();
+        String password = authView.inputPassword();
+
+        User user = findByUsername(username);
+
+        if (user == null
+                || !user.isActive()
+                || !passwordMatches(password, user.getPasswordHash())) {
+            authView.showLoginFailed();
+            return null;
+        }
+
+        currentUser = user;
+        return user;
+    }
+
+
     public void register() {
         String username = authView.inputUsername();
         String password = authView.inputPassword();
@@ -52,6 +73,8 @@ public class AuthController {
             return;
         }
 
+        UserRole role = authView.inputUserRole();
+
         LocalDateTime now = LocalDateTime.now();
         User user = new User(
                 generateUserId(),
@@ -59,12 +82,44 @@ public class AuthController {
                 now,
                 username,
                 sha256Hash(password),
-                UserRole.CUSTOMER,
+                role,
                 true
         );
 
         userRepository.save(user);
+
+        // Auto create Customer record for CUSTOMER role only
+        if (role == UserRole.CUSTOMER) {
+            CustomerRepository customerRepository = new CustomerRepository();
+            String customerId = generateCustomerId(customerRepository);
+            Customer customer = new Customer(
+                    customerId,
+                    now,
+                    now,
+                    user.getId(),
+                    username,
+                    "0000000000",
+                    username + "@gmail.com",
+                    CustomerTier.NORMAL,
+                    0.0,
+                    true
+            );
+            customerRepository.save(customer);
+        }
+
         authView.showRegisterSuccess();
+    }
+
+    private String generateCustomerId(CustomerRepository repo) {
+        int maxNumber = 0;
+        for (Customer customer : repo.findAll()) {
+            String id = customer.getId();
+            if (id != null && id.matches("C\\d+")) {
+                int number = Integer.parseInt(id.substring(1));
+                maxNumber = Math.max(maxNumber, number);
+            }
+        }
+        return String.format("C%05d", maxNumber + 1);
     }
 
     public void logout() {

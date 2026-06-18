@@ -59,6 +59,82 @@ public class FlashSaleView {
     // Display Methods
     // ==================================
 
+    public void displayEventSelection(List<FlashSaleEvent> events) {
+        System.out.println("\n===== AVAILABLE FLASH SALE EVENTS =====");
+
+        if (events == null || events.isEmpty()) {
+            System.out.println("No events available.");
+            return;
+        }
+
+        System.out.println("-------------------------------------------------------------------------------------------------");
+        System.out.printf("| %-3s | %-10s | %-30s | %-20s | %-20s |\n", "No", "Event ID", "Event Name", "Start Time", "End Time");
+        System.out.println("-------------------------------------------------------------------------------------------------");
+
+        int index = 1;
+        for (FlashSaleEvent event : events) {
+            System.out.printf("| %-3d | %-10s | %-30s | %-20s | %-20s |\n",
+                    index++,
+                    event.getId(),
+                    event.getEventName(),
+                    event.getStartTime().toString(),
+                    event.getEndTime().toString());
+        }
+        System.out.println("-------------------------------------------------------------------------------------------------");
+    }
+
+    public void displayActiveEvents(List<FlashSaleEvent> events) {
+        System.out.println("===== ACTIVE FLASH SALE EVENTS =====");
+
+        if (events == null || events.isEmpty()) {
+            System.out.println("No active events found.");
+            return;
+        }
+
+        System.out.println("-------------------------------------------------------------------------------------------------");
+        System.out.printf("| %-10s | %-30s | %-20s | %-20s |\n", "Event ID", "Event Name", "Start Time", "End Time");
+        System.out.println("-------------------------------------------------------------------------------------------------");
+        for (FlashSaleEvent event : events) {
+            System.out.printf("| %-10s | %-30s | %-20s | %-20s |\n",
+                    event.getId(),
+                    event.getEventName(),
+                    event.getStartTime().toString(),
+                    event.getEndTime().toString());
+        }
+        System.out.println("-------------------------------------------------------------------------------------------------");
+    }
+
+
+
+    public void displayFlashSaleItemsInTable(List<FlashSaleItem> items, controller.ProductController pc) {
+        System.out.println("===== FLASH SALE ITEMS IN EVENT =====");
+
+        if (items == null || items.isEmpty()) {
+            System.out.println("No items in this event.");
+            return;
+        }
+
+        System.out.println("---------------------------------------------------------------------------------------------------------------");
+        System.out.printf("| %-12s | %-35s | %-12s | %-12s | %-11s | %-13s |\n", 
+                "Flash Item ID", "Product Name", "Orig. Price", "Flash Price", "Discount %", "Remaining Qty");
+        System.out.println("---------------------------------------------------------------------------------------------------------------");
+        for (FlashSaleItem item : items) {
+            model.Entity.Product product = pc.getProductById(item.getProductId());
+            String prodName = (product != null) ? product.getName() : "Unknown Product";
+            double origPrice = (product != null) ? product.getOriginalPrice() : 0.0;
+            int remaining = item.getLimitedQty() - item.getSoldQty();
+            
+            System.out.printf("| %-12s | %-35s | %-12.0f | %-12.0f | %-10.1f%s | %-13d |\n", 
+                    item.getId(), 
+                    prodName.length() > 35 ? prodName.substring(0, 32) + "..." : prodName, 
+                    origPrice, 
+                    item.getFlashPrice(), 
+                    item.getDiscountPercent(), "%",
+                    remaining);
+        }
+        System.out.println("---------------------------------------------------------------------------------------------------------------");
+    }
+
     public void displayEventList(List<FlashSaleEvent> events) {
         System.out.println("===== FLASH SALE EVENTS =====");
 

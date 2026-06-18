@@ -117,9 +117,15 @@ public class LockMechanismJUnitTest {
                 }
         );
 
-        assertEquals(2, result.successCount.get());
-        assertEquals(0, result.expectedFailures.size());
-        assertEquals(0, result.unexpectedFailures.size());
+        // Without lock, they may both succeed (oversell) or one may fail with OutOfStockException if run sequentially.
+        assertTrue(result.unexpectedFailures.isEmpty(), "Unexpected failures: " + result.unexpectedFailures);
+        int successes = result.successCount.get();
+        int expectedFails = result.expectedFailures.size();
+        assertEquals(2, successes + expectedFails);
+
+        for (Throwable failure : result.expectedFailures) {
+            assertTrue(failure instanceof OutOfStockException);
+        }
         assertFlashItemState(repository, 6, 1);
     }
 

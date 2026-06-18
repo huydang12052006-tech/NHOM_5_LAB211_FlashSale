@@ -102,9 +102,17 @@ public class ProductView {
             return;
         }
 
+        System.out.println("-------------------------------------------------------------------------------------");
+        System.out.printf("| %-10s | %-40s | %-12s | %-9s |\n", "ID", "Product Name", "Price (VND)", "Stock Qty");
+        System.out.println("-------------------------------------------------------------------------------------");
         for (Product product : products) {
-            System.out.println(formatProduct(product));
+            System.out.printf("| %-10s | %-40s | %-12.0f | %-9d |\n", 
+                    product.getId(), 
+                    truncateName(product.getName(), 40), 
+                    product.getOriginalPrice(), 
+                    product.getStockQty());
         }
+        System.out.println("-------------------------------------------------------------------------------------");
     }
 
     public void displaySearchResults(List<Product> products) {
@@ -115,9 +123,23 @@ public class ProductView {
             return;
         }
 
+        System.out.println("-------------------------------------------------------------------------------------");
+        System.out.printf("| %-10s | %-40s | %-12s | %-9s |\n", "ID", "Product Name", "Price (VND)", "Stock Qty");
+        System.out.println("-------------------------------------------------------------------------------------");
         for (Product product : products) {
-            System.out.println(formatProduct(product));
+            System.out.printf("| %-10s | %-40s | %-12.0f | %-9d |\n", 
+                    product.getId(), 
+                    truncateName(product.getName(), 40), 
+                    product.getOriginalPrice(), 
+                    product.getStockQty());
         }
+        System.out.println("-------------------------------------------------------------------------------------");
+    }
+
+    private String truncateName(String name, int length) {
+        if (name == null) return "";
+        if (name.length() <= length) return name;
+        return name.substring(0, length - 3) + "...";
     }
 
     public void displayProductDetail(Product product) {

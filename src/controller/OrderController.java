@@ -12,6 +12,7 @@ import java.util.List;
 import model.Entity.Customer;
 import model.Entity.FlashSaleItem;
 import model.Entity.Order;
+import model.Entity.OrderDetail;
 import model.Entity.Payment;
 import model.Enum.LockMechanism;
 import model.Enum.OrderStatus;
@@ -20,6 +21,7 @@ import model.Enum.PaymentMethod;
 import repository.CustomerRepository;
 import repository.FlashSaleItemRepository;
 import repository.OrderRepository;
+import repository.OrderDetailRepository;
 import repository.PaymentRepository;
 
 public class OrderController {
@@ -39,10 +41,10 @@ public class OrderController {
     /*
         Main order placement flow
      */
-    public boolean placeOrder(String customerId,
-                              String flashItemId,
-                              int quantity,
-                              LockMechanism mechanism)
+    public String placeOrder(String customerId,
+                             String flashItemId,
+                             int quantity,
+                             LockMechanism mechanism)
             throws IOException, FlashSaleException {
 
         // =========================
@@ -116,7 +118,76 @@ public class OrderController {
                 throw new FlashSaleException("Unknown lock mechanism");
         }
 
-        return result;
+        if (result) {
+            String orderId = orderRepository.generateNextId();
+            LocalDateTime now = LocalDateTime.now();
+            double flashPrice = flashItem.getFlashPrice();
+            double totalAmount = flashPrice * quantity;
+
+            // Save Order
+            Order order = new Order(
+                    orderId,
+                    now,
+                    now,
+                    customerId,
+                    flashItem.getEventId(),
+                    totalAmount,
+                    OrderStatus.PENDING,
+                    mechanism
+            );
+            orderRepository.save(order);
+
+            // Save OrderDetail
+            OrderDetailRepository detailRepo = new OrderDetailRepository();
+            String detailId = detailRepo.generateNextId();
+            OrderDetail detail = new OrderDetail(
+                    detailId,
+                    now,
+                    now,
+                    orderId,
+                    flashItemId,
+                    quantity,
+                    flashPrice,
+                    totalAmount
+            );
+            detailRepo.save(detail);
+
+            return orderId;
+        }
+
+        return null;
+    }
+
+    public Customer getCustomerByUserId(String userId) {
+        for (Customer c : customerRepository.findAll()) {
+            if (c.getUserId() != null && c.getUserId().equalsIgnoreCase(userId)) {
+                return c;
+            }
+        }
+        // Fallback: auto-create if missing
+        int maxNumber = 0;
+        for (Customer customer : customerRepository.findAll()) {
+            String id = customer.getId();
+            if (id != null && id.matches("C\\d+")) {
+                maxNumber = Math.max(maxNumber, Integer.parseInt(id.substring(1)));
+            }
+        }
+        String newCustId = String.format("C%05d", maxNumber + 1);
+        LocalDateTime now = LocalDateTime.now();
+        Customer c = new Customer(
+                newCustId,
+                now,
+                now,
+                userId,
+                "User_" + userId,
+                "0000000000",
+                "user_" + userId + "@gmail.com",
+                model.Enum.CustomerTier.NORMAL,
+                0.0,
+                true
+        );
+        customerRepository.save(c);
+        return c;
     }
 
     public int getPurchasedQuantity(String customerId, String flashItemId) {

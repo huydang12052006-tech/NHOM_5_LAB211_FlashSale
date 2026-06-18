@@ -1,6 +1,7 @@
 package view;
 
 import java.util.Scanner;
+import model.Enum.UserRole;
 
 public class AuthView {
 
@@ -23,6 +24,19 @@ public class AuthView {
     public String inputNewPassword() {
         System.out.print("New password: ");
         return scanner.nextLine().trim();
+    }
+
+    public UserRole inputUserRole() {
+        System.out.println("Select role:");
+        System.out.println("1. Customer");
+        System.out.println("2. Seller");
+        System.out.println("3. Admin");
+        System.out.print("Choose: ");
+        String choice = scanner.nextLine().trim();
+
+        if ("2".equals(choice)) return UserRole.SELLER;
+        if ("3".equals(choice)) return UserRole.ADMIN;
+        return UserRole.CUSTOMER;
     }
 
     public void showLoginSuccess() {

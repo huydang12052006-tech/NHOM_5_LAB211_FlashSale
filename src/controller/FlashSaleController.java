@@ -41,6 +41,16 @@ public class FlashSaleController {
         return flashSaleItemRepository.findById(flashItemId);
     }
 
+    public List<FlashSaleItem> getFlashItemsByEventId(String eventId) {
+        List<FlashSaleItem> result = new java.util.ArrayList<>();
+        for (FlashSaleItem item : flashSaleItemRepository.findAll()) {
+            if (item.getEventId().equals(eventId)) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
     // ==================================
     // Create Event
     // ==================================

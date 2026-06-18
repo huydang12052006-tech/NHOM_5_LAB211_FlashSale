@@ -34,9 +34,23 @@ public class OrderView {
         return scanner.nextLine().trim();
     }
 
+    public String inputProductId() {
+        System.out.print("Product ID: ");
+        return scanner.nextLine().trim();
+    }
+
     public int inputQuantity() {
         System.out.print("Quantity: ");
         return Integer.parseInt(scanner.nextLine().trim());
+    }
+
+    public int inputOrderType() {
+        System.out.println("\nSelect order type:");
+        System.out.println("1. Flash sale product");
+        System.out.println("2. Regular product");
+        System.out.print("Choose: ");
+        String choice = scanner.nextLine().trim();
+        return "2".equals(choice) ? 2 : 1;
     }
 
     public PaymentMethod inputPaymentMethod() {

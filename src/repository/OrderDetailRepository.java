@@ -69,8 +69,16 @@ public class OrderDetailRepository extends CsvRepository<OrderDetail> {
 //         );
 //     }
 
-//     return total;
-// }
+    public String generateNextId() {
+        int maxNumber = 0;
+        for (OrderDetail detail : findAll()) {
+            String id = detail.getId();
+            if (id != null && id.matches("OD\\d+")) {
+                maxNumber = Math.max(maxNumber, Integer.parseInt(id.substring(2)));
+            }
+        }
+        return String.format("OD%06d", maxNumber + 1);
+    }
 }
     
 

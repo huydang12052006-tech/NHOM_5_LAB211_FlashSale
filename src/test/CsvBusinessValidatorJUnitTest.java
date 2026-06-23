@@ -32,11 +32,19 @@ public class CsvBusinessValidatorJUnitTest {
                     "FK_FLASHITEM_PRODUCT -> " + item.id);
         }
 
+        for (Product product : dataset.products.values()) {
+            User seller = dataset.users.get(product.sellerId);
+            assertTrue(seller != null && "SELLER".equals(seller.role),
+                    "FK_PRODUCT_SELLER -> " + product.id + " sellerId=" + product.sellerId);
+        }
+
         for (Order order : dataset.orders.values()) {
             assertTrue(dataset.customers.containsKey(order.customerId),
                     "FK_ORDER_CUSTOMER -> " + order.id);
-            assertTrue(dataset.events.containsKey(order.eventId),
-                    "FK_ORDER_EVENT -> " + order.id);
+            if (order.eventId != null && !order.eventId.isEmpty()) {
+                assertTrue(dataset.events.containsKey(order.eventId),
+                        "FK_ORDER_EVENT -> " + order.id);
+            }
         }
 
         for (Customer customer : dataset.customers.values()) {
@@ -54,8 +62,18 @@ public class CsvBusinessValidatorJUnitTest {
         for (OrderDetail detail : dataset.orderDetails) {
             assertTrue(dataset.orders.containsKey(detail.orderId),
                     "FK_DETAIL_ORDER -> " + detail.id);
-            assertTrue(dataset.flashItems.containsKey(detail.flashItemId),
-                    "FK_DETAIL_FLASHITEM -> " + detail.id);
+            boolean flashDetail = detail.flashItemId != null && !detail.flashItemId.isEmpty();
+            boolean regularDetail = detail.productId != null && !detail.productId.isEmpty();
+            assertTrue(flashDetail || regularDetail,
+                    "DETAIL_PRODUCT_REFERENCE -> " + detail.id);
+            if (flashDetail) {
+                assertTrue(dataset.flashItems.containsKey(detail.flashItemId),
+                        "FK_DETAIL_FLASHITEM -> " + detail.id);
+            }
+            if (regularDetail) {
+                assertTrue(dataset.products.containsKey(detail.productId),
+                        "FK_DETAIL_PRODUCT -> " + detail.id);
+            }
         }
 
         for (Payment payment : dataset.payments) {
@@ -130,6 +148,9 @@ public class CsvBusinessValidatorJUnitTest {
             Order order = dataset.orders.get(detail.orderId);
 
             if (order != null && "SUCCESS".equals(order.status)) {
+                if (detail.flashItemId == null || detail.flashItemId.isEmpty()) {
+                    continue;
+                }
                 sold.merge(detail.flashItemId, detail.quantity, Integer::sum);
             }
         }
@@ -151,7 +172,7 @@ public class CsvBusinessValidatorJUnitTest {
             Order order = dataset.orders.get(detail.orderId);
             FlashItem item = dataset.flashItems.get(detail.flashItemId);
 
-            if (order == null || item == null) {
+            if (order == null || item == null || order.eventId == null || order.eventId.isEmpty()) {
                 continue;
             }
 
@@ -221,11 +242,16 @@ public class CsvBusinessValidatorJUnitTest {
         List<String[]> rows = new ArrayList<>();
         List<String> lines = Files.readAllLines(Paths.get("data", file));
 
-        for (int i = 1; i < lines.size(); i++) {
+        int firstDataRow = !lines.isEmpty() && lines.get(0).startsWith("id,") ? 1 : 0;
+        for (int i = firstDataRow; i < lines.size(); i++) {
             rows.add(lines.get(i).split(","));
         }
 
         return rows;
+    }
+
+    private static long parseAmount(String value) {
+        return Math.round(Double.parseDouble(value));
     }
 
     private static class Dataset {
@@ -257,7 +283,8 @@ public class CsvBusinessValidatorJUnitTest {
             for (String[] s : readCsv("products.csv")) {
                 Product product = new Product();
                 product.id = s[0];
-                product.originalPrice = Long.parseLong(s[5]);
+                product.originalPrice = parseAmount(s[5]);
+                product.sellerId = s[9];
                 products.put(product.id, product);
             }
         }
@@ -276,7 +303,7 @@ public class CsvBusinessValidatorJUnitTest {
                 item.id = s[0];
                 item.eventId = s[3];
                 item.productId = s[4];
-                item.flashPrice = Long.parseLong(s[5]);
+                item.flashPrice = parseAmount(s[5]);
                 item.limitedQty = Integer.parseInt(s[6]);
                 item.soldQty = Integer.parseInt(s[7]);
                 flashItems.put(item.id, item);
@@ -297,7 +324,7 @@ public class CsvBusinessValidatorJUnitTest {
                 Customer customer = new Customer();
                 customer.id = s[0];
                 customer.userId = s[3];
-                customer.totalSpent = Long.parseLong(s[8]);
+                customer.totalSpent = parseAmount(s[8]);
                 customers.put(customer.id, customer);
             }
         }
@@ -309,7 +336,7 @@ public class CsvBusinessValidatorJUnitTest {
                 order.createdAt = LocalDateTime.parse(s[1]);
                 order.customerId = s[3];
                 order.eventId = s[4];
-                order.totalAmount = Long.parseLong(s[5]);
+                order.totalAmount = parseAmount(s[5]);
                 order.status = s[6];
                 orders.put(order.id, order);
             }
@@ -321,8 +348,14 @@ public class CsvBusinessValidatorJUnitTest {
                 detail.id = s[0];
                 detail.orderId = s[3];
                 detail.flashItemId = s[4];
-                detail.quantity = Integer.parseInt(s[5]);
-                detail.subTotal = Long.parseLong(s[7]);
+                if (s.length >= 9) {
+                    detail.productId = s[5];
+                    detail.quantity = Integer.parseInt(s[6]);
+                    detail.subTotal = parseAmount(s[8]);
+                } else {
+                    detail.quantity = Integer.parseInt(s[5]);
+                    detail.subTotal = parseAmount(s[7]);
+                }
                 orderDetails.add(detail);
             }
         }
@@ -339,7 +372,7 @@ public class CsvBusinessValidatorJUnitTest {
                 payment.createdAt = LocalDateTime.parse(s[1]);
                 payment.orderId = s[3];
                 payment.customerId = s[4];
-                payment.amount = Long.parseLong(s[6]);
+                payment.amount = parseAmount(s[6]);
                 payments.add(payment);
             }
         }
@@ -363,6 +396,7 @@ public class CsvBusinessValidatorJUnitTest {
     private static class Product {
         private String id;
         private long originalPrice;
+        private String sellerId;
     }
 
     private static class Event {
@@ -402,6 +436,7 @@ public class CsvBusinessValidatorJUnitTest {
         private String id;
         private String orderId;
         private String flashItemId;
+        private String productId;
         private int quantity;
         private long subTotal;
     }

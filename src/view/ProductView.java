@@ -20,9 +20,6 @@ public class ProductView {
 
     public Product inputProductData() {
 
-        System.out.print("ID: ");
-        String id = scanner.nextLine();
-
         System.out.print("Name: ");
         String name = scanner.nextLine();
 
@@ -42,7 +39,7 @@ public class ProductView {
                 );
 
         return new Product(
-                id,
+                null,
                 null,
                 null,
                 name,

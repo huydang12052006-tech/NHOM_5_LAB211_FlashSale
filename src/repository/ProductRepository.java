@@ -50,6 +50,17 @@ public class ProductRepository extends CsvRepository<Product> {
         return result;
     }
 
+    public String generateNextId() {
+        int maxNumber = 0;
+        for (Product product : findAll()) {
+            String id = product.getId();
+            if (id != null && id.matches("P\\d+")) {
+                maxNumber = Math.max(maxNumber, Integer.parseInt(id.substring(1)));
+            }
+        }
+        return String.format("P%05d", maxNumber + 1);
+    }
+
     private boolean containsIgnoreCase(String value, String keyword) {
         return value != null && value.toLowerCase().contains(keyword);
     }

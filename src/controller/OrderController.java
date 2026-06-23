@@ -7,13 +7,16 @@ import exception.FlashSaleException;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import model.Entity.Customer;
 import model.Entity.FlashSaleItem;
 import model.Entity.Order;
 import model.Entity.OrderDetail;
 import model.Entity.Payment;
+import model.Entity.Product;
 import model.Enum.LockMechanism;
 import model.Enum.OrderStatus;
 import model.Enum.PaymentMethod;
@@ -23,6 +26,7 @@ import repository.FlashSaleItemRepository;
 import repository.OrderRepository;
 import repository.OrderDetailRepository;
 import repository.PaymentRepository;
+import repository.ProductRepository;
 
 public class OrderController {
 
@@ -30,12 +34,14 @@ public class OrderController {
     private final CustomerRepository customerRepository;
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
+    private final ProductRepository productRepository;
 
     public OrderController() {
         this.flashSaleItemRepository = new FlashSaleItemRepository();
         this.customerRepository = new CustomerRepository();
         this.orderRepository = new OrderRepository();
         this.paymentRepository = new PaymentRepository();
+        this.productRepository = new ProductRepository();
     }
 
     /*
@@ -146,6 +152,7 @@ public class OrderController {
                     now,
                     orderId,
                     flashItemId,
+                    flashItem.getProductId(),
                     quantity,
                     flashPrice,
                     totalAmount
@@ -156,6 +163,117 @@ public class OrderController {
         }
 
         return null;
+    }
+
+    public String placeRegularOrder(String customerId, String productId, int quantity,
+                                    LockMechanism mechanism) throws FlashSaleException {
+        if (quantity <= 0) {
+            throw new InvalidQuantityException("Quantity must be greater than 0");
+        }
+        if (customerRepository.findById(customerId) == null) {
+            throw new FlashSaleException("Customer not found");
+        }
+        Product product = productRepository.findById(productId);
+        if (product == null || product.getStatus() != model.Enum.SaleStatus.ACTIVE) {
+            throw new FlashSaleException("Product not found or not active");
+        }
+        if (product.getStockQty() < quantity) {
+            throw new OutOfStockException("Not enough stock");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        product.setStockQty(product.getStockQty() - quantity);
+        product.setUpdatedAt(now);
+        if (!productRepository.update(product)) {
+            throw new FlashSaleException("Unable to update product stock");
+        }
+
+        double totalAmount = product.getOriginalPrice() * quantity;
+        String orderId = orderRepository.generateNextId();
+        orderRepository.save(new Order(orderId, now, now, customerId, null,
+                totalAmount, OrderStatus.PENDING, mechanism));
+        OrderDetailRepository detailRepository = new OrderDetailRepository();
+        detailRepository.save(new OrderDetail(detailRepository.generateNextId(), now, now,
+                orderId, null, productId, quantity, product.getOriginalPrice(), totalAmount));
+        return orderId;
+    }
+
+    /**
+     * Creates one order and one detail per cart entry. The current CSV schema
+     * stores a single event on an order, so a cart is intentionally restricted
+     * to items from one event.
+     */
+    public String placeCartOrder(String customerId, Map<String, Integer> cart,
+                                 LockMechanism mechanism)
+            throws IOException, FlashSaleException {
+        if (cart == null || cart.isEmpty()) {
+            throw new FlashSaleException("Cart is empty");
+        }
+        Customer customer = customerRepository.findById(customerId);
+        if (customer == null) {
+            throw new FlashSaleException("Customer not found");
+        }
+
+        Map<String, FlashSaleItem> items = new LinkedHashMap<String, FlashSaleItem>();
+        String eventId = null;
+        double totalAmount = 0.0;
+        for (Map.Entry<String, Integer> entry : cart.entrySet()) {
+            int quantity = entry.getValue() == null ? 0 : entry.getValue();
+            FlashSaleItem item = flashSaleItemRepository.findById(entry.getKey());
+            if (item == null || quantity <= 0) {
+                throw new FlashSaleException("Invalid cart item: " + entry.getKey());
+            }
+            if (eventId == null) {
+                eventId = item.getEventId();
+            } else if (!eventId.equals(item.getEventId())) {
+                throw new FlashSaleException("Cart items must belong to one flash event");
+            }
+            if (getPurchasedQuantity(customerId, item.getId()) + quantity > 2) {
+                throw new PurchaseLimitExceededException("Maximum 2 items per customer/event");
+            }
+            if (item.getLimitedQty() - item.getSoldQty() < quantity) {
+                throw new OutOfStockException("Not enough stock for " + item.getId());
+            }
+            items.put(item.getId(), item);
+            totalAmount += item.getFlashPrice() * quantity;
+        }
+
+        for (Map.Entry<String, Integer> entry : cart.entrySet()) {
+            boolean sold;
+            switch (mechanism) {
+                case NO_LOCK:
+                    sold = flashSaleItemRepository.sellWithNoLock(entry.getKey(), entry.getValue());
+                    break;
+                case SYNCHRONIZED:
+                    sold = flashSaleItemRepository.sellWithSynchronized(entry.getKey(), entry.getValue());
+                    break;
+                case FILE_LOCK:
+                    sold = flashSaleItemRepository.sellWithFileLock(entry.getKey(), entry.getValue());
+                    break;
+                case OPTIMISTIC_LOCK:
+                    sold = flashSaleItemRepository.sellWithOptimisticLock(entry.getKey(), entry.getValue());
+                    break;
+                default:
+                    throw new FlashSaleException("Unknown lock mechanism");
+            }
+            if (!sold) {
+                throw new FlashSaleException("Unable to reserve cart item: " + entry.getKey());
+            }
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        String orderId = orderRepository.generateNextId();
+        orderRepository.save(new Order(orderId, now, now, customerId, eventId,
+                totalAmount, OrderStatus.PENDING, mechanism));
+
+        OrderDetailRepository detailRepository = new OrderDetailRepository();
+        for (Map.Entry<String, Integer> entry : cart.entrySet()) {
+            FlashSaleItem item = items.get(entry.getKey());
+            double subTotal = item.getFlashPrice() * entry.getValue();
+            detailRepository.save(new OrderDetail(detailRepository.generateNextId(), now, now,
+                    orderId, item.getId(), item.getProductId(), entry.getValue(), item.getFlashPrice(), subTotal));
+        }
+        return orderId;
     }
 
     public Customer getCustomerByUserId(String userId) {
@@ -208,9 +326,64 @@ public class OrderController {
         return orderRepository.findById(orderId);
     }
 
+    public List<Order> getOrdersForSeller(String sellerId) {
+        List<Order> result = new ArrayList<Order>();
+        ProductRepository productRepository = new ProductRepository();
+        OrderDetailRepository detailRepository = new OrderDetailRepository();
+        for (Order order : orderRepository.findAll()) {
+            for (OrderDetail detail : detailRepository.findAll()) {
+                if (!order.getId().equals(detail.getOrderId())) {
+                    continue;
+                }
+                Product product = null;
+                if (detail.getProductId() != null) {
+                    product = productRepository.findById(detail.getProductId());
+                } else if (detail.getFlashItemId() != null) {
+                    FlashSaleItem item = flashSaleItemRepository.findById(detail.getFlashItemId());
+                    product = item == null ? null : productRepository.findById(item.getProductId());
+                }
+                if (product != null && sellerId.equalsIgnoreCase(product.getSellerId())) {
+                    result.add(order);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public List<Order> getPendingOrdersForSeller(String sellerId) {
+        List<Order> result = new ArrayList<Order>();
+        for (Order order : getOrdersForSeller(sellerId)) {
+            if (order.getStatus() == OrderStatus.PENDING) {
+                result.add(order);
+            }
+        }
+        return result;
+    }
+
+    public boolean confirmOrderForSeller(String orderId, String sellerId) {
+        for (Order order : getPendingOrdersForSeller(sellerId)) {
+            if (order.getId().equals(orderId)) {
+                return confirmOrder(orderId);
+            }
+        }
+        return false;
+    }
+
+    public boolean cancelOrderForSeller(String orderId, String sellerId) {
+        for (Order order : getPendingOrdersForSeller(sellerId)) {
+            if (order.getId().equals(orderId)) {
+                order.setStatus(OrderStatus.CANCELLED);
+                order.setUpdatedAt(LocalDateTime.now());
+                return orderRepository.update(order);
+            }
+        }
+        return false;
+    }
+
     public boolean confirmOrder(String orderId) {
         Order order = orderRepository.findById(orderId);
-        if (order == null) {
+        if (order == null || order.getStatus() != OrderStatus.PENDING) {
             return false;
         }
         order.setStatus(OrderStatus.SUCCESS);

@@ -119,7 +119,7 @@ public void fromCsvLine(String csv) {
 
     this.customerId = parts[3];
 
-    this.eventId = parts[4];
+    this.eventId = parts[4].isEmpty() ? null : parts[4];
 
     this.totalAmount = Double.parseDouble(parts[5]);
 

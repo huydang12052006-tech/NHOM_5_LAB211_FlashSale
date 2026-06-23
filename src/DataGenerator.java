@@ -1,4 +1,5 @@
-/*
+
+/*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
  */
@@ -207,7 +208,9 @@ public class DataGenerator {
         private static final int NUM_FLASH_ITEMS = 1000;
         private static final int NUM_CUSTOMERS = 2500;
         private static final int NUM_ORDERS = 3000;
-        private static final int NUM_USERS = NUM_CUSTOMERS + 100;
+        private static final int NUM_SELLERS = 99;
+        private static final int NUM_ADMINS = 1;
+        private static final int NUM_USERS = NUM_CUSTOMERS + NUM_SELLERS + NUM_ADMINS;
 
         public static void main(String[] args) {
 
@@ -258,7 +261,7 @@ public class DataGenerator {
 
                 BufferedWriter bw = new BufferedWriter(new FileWriter("data/products.csv"));
 
-                bw.write("id,createdAt,updatedAt,name,category,originalPrice,stockQty,version,status");
+                bw.write("id,createdAt,updatedAt,name,category,originalPrice,stockQty,version,status,sellerId");
                 bw.newLine();
 
                 for (int i = 1; i <= count; i++) {
@@ -287,6 +290,8 @@ public class DataGenerator {
 
                         // Product status: ACTIVE or DISABLED (not UPCOMING/ENDED)
                         String status = random.nextInt(10) < 8 ? "ACTIVE" : "DISABLED";
+                        String sellerId = "U" + String.format("%05d",
+                                        NUM_CUSTOMERS + 1 + random.nextInt(NUM_SELLERS));
 
                         // Store price for FlashItem reference
                         productPriceMap.put(id, price);
@@ -300,7 +305,8 @@ public class DataGenerator {
                                         String.valueOf((long) price),
                                         String.valueOf(stockQty),
                                         String.valueOf(version),
-                                        status));
+                                        status,
+                                        sellerId));
 
                         bw.newLine();
                 }
@@ -532,7 +538,7 @@ public class DataGenerator {
                 bwOrders.write("id,createdAt,updatedAt,customerId,eventId,totalAmount,status,lockMechanism");
                 bwOrders.newLine();
 
-                bwDetails.write("id,createdAt,updatedAt,orderId,flashItemId,quantity,unitPrice,subTotal");
+                bwDetails.write("id,createdAt,updatedAt,orderId,flashItemId,productId,quantity,unitPrice,subTotal");
                 bwDetails.newLine();
 
                 int detailCounter = 0;
@@ -652,6 +658,7 @@ public class DataGenerator {
                                                 updatedAt.format(formatter),
                                                 orderId,
                                                 flashItemId,
+                                                productId,
                                                 String.valueOf(actualQuantity),
                                                 String.valueOf((long) unitPrice),
                                                 String.valueOf((long) subTotal)));
@@ -852,8 +859,10 @@ public class DataGenerator {
                         String role;
                         if (i <= NUM_CUSTOMERS) {
                                 role = "CUSTOMER";
+                        } else if (i <= NUM_CUSTOMERS + NUM_SELLERS) {
+                                role = "SELLER";
                         } else {
-                                role = random.nextInt(100) < 75 ? "SELLER" : "ADMIN";
+                                role = "ADMIN";
                         }
 
                         boolean active = random.nextInt(10) < 9; // 90% active

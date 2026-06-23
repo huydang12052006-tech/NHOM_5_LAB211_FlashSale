@@ -1,6 +1,7 @@
 package view;
 
 import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Scanner;
 
 import model.Entity.FlashSaleEvent;
@@ -29,16 +30,15 @@ public class FlashSaleView {
         return scanner.nextLine().trim();
     }
 
-    /**
-     * Inputs basic event data (id + name) for creation.
-     * Returns String[2]: [id, name]
-     */
-    public String[] inputNewEvent() {
-        System.out.print("Event ID: ");
-        String id = scanner.nextLine().trim();
+    public String inputNewEventNameForCreation() {
         System.out.print("Event name: ");
-        String name = scanner.nextLine().trim();
-        return new String[]{id, name};
+        return scanner.nextLine().trim();
+    }
+
+    public LocalDateTime inputDateTime(String label, LocalDateTime currentValue) {
+        System.out.print(label + " [" + currentValue + "] (blank = keep): ");
+        String value = scanner.nextLine().trim();
+        return value.isEmpty() ? currentValue : LocalDateTime.parse(value);
     }
 
     public String inputFlashItemId() {

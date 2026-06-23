@@ -11,6 +11,10 @@ public class AuthView {
         this.scanner = new Scanner(System.in);
     }
 
+    public AuthView(Scanner scanner) {
+        this.scanner = scanner;
+    }
+
     public String inputUsername() {
         System.out.print("Username: ");
         return scanner.nextLine().trim();
@@ -26,16 +30,29 @@ public class AuthView {
         return scanner.nextLine().trim();
     }
 
+    public String inputFullName() {
+        System.out.print("Full name: ");
+        return scanner.nextLine().trim();
+    }
+
+    public String inputPhone() {
+        System.out.print("Phone: ");
+        return scanner.nextLine().trim();
+    }
+
+    public String inputEmail() {
+        System.out.print("Email: ");
+        return scanner.nextLine().trim();
+    }
+
     public UserRole inputUserRole() {
         System.out.println("Select role:");
         System.out.println("1. Customer");
         System.out.println("2. Seller");
-        System.out.println("3. Admin");
         System.out.print("Choose: ");
         String choice = scanner.nextLine().trim();
 
         if ("2".equals(choice)) return UserRole.SELLER;
-        if ("3".equals(choice)) return UserRole.ADMIN;
         return UserRole.CUSTOMER;
     }
 
@@ -53,6 +70,10 @@ public class AuthView {
 
     public void showUsernameExists() {
         System.out.println("[FAILED] Username already exists.");
+    }
+
+    public void showRegisterValidationError(String message) {
+        System.out.println("[FAILED] " + message);
     }
 
     public void showLogoutSuccess() {

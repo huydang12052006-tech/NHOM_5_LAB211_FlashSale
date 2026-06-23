@@ -46,6 +46,20 @@ public class AuthController {
         return true;
     }
 
+    public User loginAs(UserRole expectedRole) {
+        User user = validateLogin();
+        if (user == null) {
+            return null;
+        }
+        if (user.getRole() != expectedRole) {
+            authView.showLoginFailed();
+            currentUser = null;
+            return null;
+        }
+        authView.showLoginSuccess();
+        return user;
+    }
+
     public User validateLogin() {
         String username = authView.inputUsername();
         String password = authView.inputPassword();
@@ -65,6 +79,13 @@ public class AuthController {
 
 
     public void register() {
+        register(authView.inputUserRole());
+    }
+
+    public void register(UserRole role) {
+        if (role == UserRole.ADMIN) {
+            throw new IllegalArgumentException("Admin accounts cannot be registered.");
+        }
         String username = authView.inputUsername();
         String password = authView.inputPassword();
 
@@ -73,7 +94,17 @@ public class AuthController {
             return;
         }
 
-        UserRole role = authView.inputUserRole();
+        String fullName = null;
+        String phone = null;
+        String email = null;
+        if (role == UserRole.CUSTOMER) {
+            fullName = authView.inputFullName();
+            phone = authView.inputPhone();
+            email = authView.inputEmail();
+            if (!isValidCustomerRegistration(fullName, phone, email)) {
+                return;
+            }
+        }
 
         LocalDateTime now = LocalDateTime.now();
         User user = new User(
@@ -87,6 +118,7 @@ public class AuthController {
         );
 
         userRepository.save(user);
+        currentUser = user;
 
         // Auto create Customer record for CUSTOMER role only
         if (role == UserRole.CUSTOMER) {
@@ -97,9 +129,9 @@ public class AuthController {
                     now,
                     now,
                     user.getId(),
-                    username,
-                    "0000000000",
-                    username + "@gmail.com",
+                    fullName,
+                    phone,
+                    email,
                     CustomerTier.NORMAL,
                     0.0,
                     true
@@ -108,6 +140,22 @@ public class AuthController {
         }
 
         authView.showRegisterSuccess();
+    }
+
+    private boolean isValidCustomerRegistration(String fullName, String phone, String email) {
+        if (fullName == null || fullName.trim().isEmpty() || fullName.contains(",")) {
+            authView.showRegisterValidationError("Full name is required and cannot contain a comma.");
+            return false;
+        }
+        if (phone == null || !phone.matches("0\\d{9,10}")) {
+            authView.showRegisterValidationError("Phone must start with 0 and contain 10-11 digits.");
+            return false;
+        }
+        if (email == null || !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            authView.showRegisterValidationError("Email format is invalid.");
+            return false;
+        }
+        return true;
     }
 
     private String generateCustomerId(CustomerRepository repo) {
@@ -223,11 +271,13 @@ public class AuthController {
 
     public boolean updateUserAccount(String userId, String username, UserRole role) {
         User user = userRepository.findById(userId);
-        if (user == null) {
+        if (user == null || role == UserRole.ADMIN) {
             return false;
         }
         user.setUsername(username);
-        user.setRole(role);
+        if (user.getRole() != UserRole.ADMIN) {
+            user.setRole(role);
+        }
         user.setUpdatedAt(LocalDateTime.now());
         return userRepository.update(user);
     }

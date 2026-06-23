@@ -93,6 +93,24 @@ public class OrderView {
         System.out.println("=========================");
     }
 
+    public void displayBuyerOrderHistory(List<Order> orders) {
+        System.out.println("\n===== MY ORDERS =====");
+        if (orders == null || orders.isEmpty()) {
+            System.out.println("No orders found.");
+            return;
+        }
+        System.out.println("--------------------------------------------------------------------------------");
+        System.out.printf("| %-10s | %-19s | %-14s | %-12s | %-10s |%n",
+                "Order ID", "Created at", "Total (VND)", "Status", "Event");
+        System.out.println("--------------------------------------------------------------------------------");
+        for (Order order : orders) {
+            System.out.printf("| %-10s | %-19s | %-14.0f | %-12s | %-10s |%n",
+                    order.getId(), order.getCreatedAt(), order.getTotalAmount(),
+                    order.getStatus(), order.getEventId());
+        }
+        System.out.println("--------------------------------------------------------------------------------");
+    }
+
     public void displayInventoryResult(FlashSaleItem item) {
         if (item == null) {
             System.out.println("[FAILED] Flash sale item not found.");

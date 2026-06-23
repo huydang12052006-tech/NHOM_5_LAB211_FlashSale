@@ -37,17 +37,12 @@ public class UserView {
         System.out.println("Role:");
         System.out.println("1. CUSTOMER");
         System.out.println("2. SELLER");
-        System.out.println("3. ADMIN");
         System.out.print("Choose: ");
         String choice = scanner.nextLine().trim();
 
         if ("2".equals(choice)) {
             return UserRole.SELLER;
         }
-        if ("3".equals(choice)) {
-            return UserRole.ADMIN;
-        }
-
         return UserRole.CUSTOMER;
     }
 

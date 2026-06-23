@@ -51,18 +51,36 @@ public class FlashSaleController {
         return result;
     }
 
+    /** Returns only sale items and products that customers can currently buy. */
+    public List<FlashSaleItem> getActiveFlashItemsByEventId(String eventId) {
+        List<FlashSaleItem> result = new java.util.ArrayList<FlashSaleItem>();
+        for (FlashSaleItem item : getFlashItemsByEventId(eventId)) {
+            Product product = productRepository.findById(item.getProductId());
+            if (item.getStatus() == SaleStatus.ACTIVE
+                    && product != null && product.getStatus() == SaleStatus.ACTIVE
+                    && item.getLimitedQty() > item.getSoldQty()) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
     // ==================================
     // Create Event
     // ==================================
 
-    public boolean createEvent(String id, String name) {
+    public boolean createEvent(String name) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime start = now;
         LocalDateTime end = start.plusHours(2);
 
-        FlashSaleEvent event = new FlashSaleEvent(id, now, now, name, start, end, SaleStatus.UPCOMING);
+        FlashSaleEvent event = new FlashSaleEvent(flashSaleRepository.generateNextId(), now, now, name, start, end, SaleStatus.UPCOMING);
         flashSaleRepository.save(event);
         return true;
+    }
+
+    public boolean createEvent(String ignoredId, String name) {
+        return createEvent(name);
     }
 
     // ==================================
@@ -89,6 +107,20 @@ public class FlashSaleController {
         }
 
         event.setEventName(newName);
+        event.setUpdatedAt(LocalDateTime.now());
+        return flashSaleRepository.update(event);
+    }
+
+    public boolean updateEvent(String eventId, String name, SaleStatus status,
+                               LocalDateTime startTime, LocalDateTime endTime) {
+        FlashSaleEvent event = flashSaleRepository.findById(eventId);
+        if (event == null || endTime.isBefore(startTime)) {
+            return false;
+        }
+        event.setEventName(name);
+        event.setStatus(status);
+        event.setStartTime(startTime);
+        event.setEndTime(endTime);
         event.setUpdatedAt(LocalDateTime.now());
         return flashSaleRepository.update(event);
     }
@@ -157,5 +189,30 @@ public class FlashSaleController {
 
     public Product getProductById(String productId) {
         return productRepository.findById(productId);
+    }
+
+    public boolean updateFlashItem(String eventId, String productId, String sellerId,
+                                   double discountPercent, int limitedQty) {
+        if (discountPercent < 0 || discountPercent >= 100 || limitedQty <= 0) {
+            return false;
+        }
+        Product product = productRepository.findById(productId);
+        if (product == null || !sellerId.equalsIgnoreCase(product.getSellerId())
+                || limitedQty > product.getStockQty()) {
+            return false;
+        }
+        for (FlashSaleItem item : flashSaleItemRepository.findAll()) {
+            if (eventId.equals(item.getEventId()) && productId.equals(item.getProductId())) {
+                if (limitedQty < item.getSoldQty()) {
+                    return false;
+                }
+                item.setDiscountPercent(discountPercent);
+                item.setFlashPrice(product.getOriginalPrice() * (100.0 - discountPercent) / 100.0);
+                item.setLimitedQty(limitedQty);
+                item.setUpdatedAt(LocalDateTime.now());
+                return flashSaleItemRepository.update(item);
+            }
+        }
+        return false;
     }
 }

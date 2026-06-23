@@ -26,6 +26,17 @@ public class FlashSaleRepository extends CsvRepository<FlashSaleEvent> {
             return null;
         }
     }
+
+    public String generateNextId() {
+        int maxNumber = 0;
+        for (FlashSaleEvent event : findAll()) {
+            String id = event.getId();
+            if (id != null && id.matches("E\\d+")) {
+                maxNumber = Math.max(maxNumber, Integer.parseInt(id.substring(1)));
+            }
+        }
+        return String.format("E%03d", maxNumber + 1);
+    }
 }
     
 

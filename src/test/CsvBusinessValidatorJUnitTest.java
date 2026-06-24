@@ -87,6 +87,23 @@ public class CsvBusinessValidatorJUnitTest {
             assertTrue(dataset.orders.containsKey(transaction.orderId),
                     "FK_TRANSACTION_ORDER -> " + transaction.id);
         }
+
+        for (CartItem cartItem : dataset.cartItems) {
+            assertTrue(dataset.customers.containsKey(cartItem.customerId),
+                    "FK_CART_CUSTOMER -> " + cartItem.id);
+            assertTrue(cartItem.productId != null && !cartItem.productId.isEmpty()
+                            && dataset.products.containsKey(cartItem.productId),
+                    "FK_CART_PRODUCT -> " + cartItem.id);
+            assertTrue(cartItem.quantity > 0, "CART_QUANTITY -> " + cartItem.id);
+            if (cartItem.flashItemId != null && !cartItem.flashItemId.isEmpty()) {
+                FlashItem flashItem = dataset.flashItems.get(cartItem.flashItemId);
+                assertTrue(flashItem != null, "FK_CART_FLASHITEM -> " + cartItem.id);
+                if (flashItem != null) {
+                    assertTrue(flashItem.productId.equals(cartItem.productId),
+                            "CART_FLASH_PRODUCT_MATCH -> " + cartItem.id);
+                }
+            }
+        }
     }
 
     @Test
@@ -264,6 +281,7 @@ public class CsvBusinessValidatorJUnitTest {
         private final List<OrderDetail> orderDetails = new ArrayList<>();
         private final List<Payment> payments = new ArrayList<>();
         private final List<Transaction> transactions = new ArrayList<>();
+        private final List<CartItem> cartItems = new ArrayList<>();
 
         private static Dataset load() throws Exception {
             Dataset dataset = new Dataset();
@@ -276,6 +294,7 @@ public class CsvBusinessValidatorJUnitTest {
             dataset.loadOrderDetails();
             dataset.loadPayments();
             dataset.loadTransactions();
+            dataset.loadCartItems();
             return dataset;
         }
 
@@ -391,6 +410,22 @@ public class CsvBusinessValidatorJUnitTest {
                 transactions.add(transaction);
             }
         }
+
+        private void loadCartItems() throws Exception {
+            Path path = Paths.get("data", "cart_items.csv");
+            if (!Files.exists(path)) {
+                return;
+            }
+            for (String[] s : readCsv("cart_items.csv")) {
+                CartItem item = new CartItem();
+                item.id = s[0];
+                item.customerId = s[3];
+                item.flashItemId = s[4];
+                item.productId = s[5];
+                item.quantity = Integer.parseInt(s[6]);
+                cartItems.add(item);
+            }
+        }
     }
 
     private static class Product {
@@ -453,5 +488,13 @@ public class CsvBusinessValidatorJUnitTest {
         private String id;
         private LocalDateTime createdAt;
         private String orderId;
+    }
+
+    private static class CartItem {
+        private String id;
+        private String customerId;
+        private String flashItemId;
+        private String productId;
+        private int quantity;
     }
 }

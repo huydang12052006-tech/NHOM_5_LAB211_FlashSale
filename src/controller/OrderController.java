@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import model.Entity.Customer;
+import model.Entity.CartItem;
 import model.Entity.FlashSaleItem;
 import model.Entity.Order;
 import model.Entity.OrderDetail;
@@ -167,34 +168,59 @@ public class OrderController {
 
     public String placeRegularOrder(String customerId, String productId, int quantity,
                                     LockMechanism mechanism) throws FlashSaleException {
-        if (quantity <= 0) {
-            throw new InvalidQuantityException("Quantity must be greater than 0");
+        Map<String, Integer> products = new LinkedHashMap<String, Integer>();
+        products.put(productId, quantity);
+        return placeRegularCartOrder(customerId, products, mechanism);
+    }
+
+    public String placeRegularCartOrder(String customerId, Map<String, Integer> products,
+                                        LockMechanism mechanism) throws FlashSaleException {
+        if (products == null || products.isEmpty()) {
+            throw new FlashSaleException("Cart is empty");
         }
         if (customerRepository.findById(customerId) == null) {
             throw new FlashSaleException("Customer not found");
         }
-        Product product = productRepository.findById(productId);
-        if (product == null || product.getStatus() != model.Enum.SaleStatus.ACTIVE) {
-            throw new FlashSaleException("Product not found or not active");
-        }
-        if (product.getStockQty() < quantity) {
-            throw new OutOfStockException("Not enough stock");
+
+        Map<String, Product> cartProducts = new LinkedHashMap<String, Product>();
+        double totalAmount = 0.0;
+        for (Map.Entry<String, Integer> entry : products.entrySet()) {
+            int quantity = entry.getValue() == null ? 0 : entry.getValue();
+            Product product = productRepository.findById(entry.getKey());
+            if (quantity <= 0) {
+                throw new InvalidQuantityException("Quantity must be greater than 0");
+            }
+            if (product == null || product.getStatus() != model.Enum.SaleStatus.ACTIVE) {
+                throw new FlashSaleException("Product not found or not active");
+            }
+            if (product.getStockQty() < quantity) {
+                throw new OutOfStockException("Not enough stock for " + product.getId());
+            }
+            cartProducts.put(product.getId(), product);
+            totalAmount += product.getOriginalPrice() * quantity;
         }
 
         LocalDateTime now = LocalDateTime.now();
-        product.setStockQty(product.getStockQty() - quantity);
-        product.setUpdatedAt(now);
-        if (!productRepository.update(product)) {
-            throw new FlashSaleException("Unable to update product stock");
+        for (Map.Entry<String, Integer> entry : products.entrySet()) {
+            Product product = cartProducts.get(entry.getKey());
+            product.setStockQty(product.getStockQty() - entry.getValue());
+            product.setUpdatedAt(now);
+            if (!productRepository.update(product)) {
+                throw new FlashSaleException("Unable to update product stock");
+            }
         }
 
-        double totalAmount = product.getOriginalPrice() * quantity;
         String orderId = orderRepository.generateNextId();
         orderRepository.save(new Order(orderId, now, now, customerId, null,
                 totalAmount, OrderStatus.PENDING, mechanism));
         OrderDetailRepository detailRepository = new OrderDetailRepository();
-        detailRepository.save(new OrderDetail(detailRepository.generateNextId(), now, now,
-                orderId, null, productId, quantity, product.getOriginalPrice(), totalAmount));
+        for (Map.Entry<String, Integer> entry : products.entrySet()) {
+            Product product = cartProducts.get(entry.getKey());
+            int quantity = entry.getValue();
+            double subTotal = product.getOriginalPrice() * quantity;
+            detailRepository.save(new OrderDetail(detailRepository.generateNextId(), now, now,
+                    orderId, null, product.getId(), quantity, product.getOriginalPrice(), subTotal));
+        }
         return orderId;
     }
 
@@ -274,6 +300,43 @@ public class OrderController {
                     orderId, item.getId(), item.getProductId(), entry.getValue(), item.getFlashPrice(), subTotal));
         }
         return orderId;
+    }
+
+    public List<String> checkoutCart(String customerId, List<CartItem> cartItems,
+                                     LockMechanism mechanism) throws IOException, FlashSaleException {
+        if (cartItems == null || cartItems.isEmpty()) {
+            throw new FlashSaleException("Cart is empty");
+        }
+        Map<String, Integer> regularProducts = new LinkedHashMap<String, Integer>();
+        Map<String, Map<String, Integer>> flashItemsByEvent = new LinkedHashMap<String, Map<String, Integer>>();
+        for (CartItem cartItem : cartItems) {
+            if (cartItem.getFlashItemId() != null) {
+                FlashSaleItem item = flashSaleItemRepository.findById(cartItem.getFlashItemId());
+                if (item == null) {
+                    throw new FlashSaleException("Flash sale item no longer exists: " + cartItem.getFlashItemId());
+                }
+                Map<String, Integer> eventItems = flashItemsByEvent.get(item.getEventId());
+                if (eventItems == null) {
+                    eventItems = new LinkedHashMap<String, Integer>();
+                    flashItemsByEvent.put(item.getEventId(), eventItems);
+                }
+                eventItems.put(item.getId(), eventItems.getOrDefault(item.getId(), 0) + cartItem.getQuantity());
+            } else if (cartItem.getProductId() != null) {
+                regularProducts.put(cartItem.getProductId(),
+                        regularProducts.getOrDefault(cartItem.getProductId(), 0) + cartItem.getQuantity());
+            } else {
+                throw new FlashSaleException("Cart item has no product reference: " + cartItem.getId());
+            }
+        }
+
+        List<String> orderIds = new ArrayList<String>();
+        if (!regularProducts.isEmpty()) {
+            orderIds.add(placeRegularCartOrder(customerId, regularProducts, mechanism));
+        }
+        for (Map<String, Integer> flashItems : flashItemsByEvent.values()) {
+            orderIds.add(placeCartOrder(customerId, flashItems, mechanism));
+        }
+        return orderIds;
     }
 
     public Customer getCustomerByUserId(String userId) {

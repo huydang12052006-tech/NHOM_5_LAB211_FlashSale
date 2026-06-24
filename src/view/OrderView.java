@@ -45,9 +45,9 @@ public class OrderView {
     }
 
     public int inputOrderType() {
-        System.out.println("\nSelect order type:");
-        System.out.println("1. Flash sale product");
-        System.out.println("2. Regular product");
+        System.out.println("\nWhat would you like to buy?");
+        System.out.println("1. Flash Sale Item");
+        System.out.println("2. Regular Product");
         System.out.print("Choose: ");
         String choice = scanner.nextLine().trim();
         return "2".equals(choice) ? 2 : 1;

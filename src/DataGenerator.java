@@ -211,6 +211,9 @@ public class DataGenerator {
         private static final int NUM_SELLERS = 99;
         private static final int NUM_ADMINS = 1;
         private static final int NUM_USERS = NUM_CUSTOMERS + NUM_SELLERS + NUM_ADMINS;
+        private static final int NUM_ACTIVE_EVENTS = 10;
+        private static final int NUM_GUARANTEED_ACTIVE_PRODUCTS = 100;
+        private static final int NUM_CART_ITEMS = 300;
 
         public static void main(String[] args) {
 
@@ -245,6 +248,9 @@ public class DataGenerator {
 
                         // Phase 9: Generate OrderTransactions CSV
                         generateOrderTransactions();
+
+                        // Phase 10: Generate saved customer-cart rows
+                        generateCartItems(NUM_CART_ITEMS);
 
                         System.out.println("Generate CSV SUCCESS!");
 
@@ -289,7 +295,8 @@ public class DataGenerator {
                         int version = random.nextInt(20);
 
                         // Product status: ACTIVE or DISABLED (not UPCOMING/ENDED)
-                        String status = random.nextInt(10) < 8 ? "ACTIVE" : "DISABLED";
+                        String status = i <= NUM_GUARANTEED_ACTIVE_PRODUCTS || random.nextInt(10) < 8
+                                        ? "ACTIVE" : "DISABLED";
                         String sellerId = "U" + String.format("%05d",
                                         NUM_CUSTOMERS + 1 + random.nextInt(NUM_SELLERS));
 
@@ -314,6 +321,82 @@ public class DataGenerator {
                 bw.close();
         }
 
+        private static String productIdForEvent(String eventId) {
+                int eventNumber = Integer.parseInt(eventId.substring(1));
+                if (eventNumber <= NUM_ACTIVE_EVENTS) {
+                        return "P" + String.format("%05d",
+                                        1 + random.nextInt(NUM_GUARANTEED_ACTIVE_PRODUCTS));
+                }
+                return "P" + String.format("%05d", 1 + random.nextInt(NUM_PRODUCTS));
+        }
+
+        // =========================================================
+        // SAVED CART ITEMS
+        // =========================================================
+
+        private static void generateCartItems(int count) throws IOException {
+                BufferedWriter bw = new BufferedWriter(new FileWriter("data/cart_items.csv"));
+                bw.write("id,createdAt,updatedAt,customerId,flashItemId,productId,quantity");
+                bw.newLine();
+
+                List<String> activeFlashItems = new ArrayList<>();
+                for (Map.Entry<String, List<String>> entry : eventFlashItemsMap.entrySet()) {
+                        int eventNumber = Integer.parseInt(entry.getKey().substring(1));
+                        if (eventNumber <= NUM_ACTIVE_EVENTS) {
+                                activeFlashItems.addAll(entry.getValue());
+                        }
+                }
+
+                java.util.Set<String> usedReferences = new java.util.HashSet<>();
+                int written = 0;
+                int attempts = 0;
+                while (written < count && attempts++ < count * 20) {
+                        String customerId = "C" + String.format("%05d",
+                                        1 + random.nextInt(NUM_CUSTOMERS));
+                        boolean flashCartItem = !activeFlashItems.isEmpty() && random.nextBoolean();
+                        String flashItemId = "";
+                        String productId;
+
+                        if (flashCartItem) {
+                                String candidate = activeFlashItems.get(random.nextInt(activeFlashItems.size()));
+                                String eventId = null;
+                                for (Map.Entry<String, List<String>> entry : eventFlashItemsMap.entrySet()) {
+                                        if (entry.getValue().contains(candidate)) {
+                                                eventId = entry.getKey();
+                                                break;
+                                        }
+                                }
+                                String product = flashItemProductMap.get(candidate);
+                                int sold = flashItemSoldQtyMap.getOrDefault(candidate, 0);
+                                int limited = flashItemLimitedQtyMap.get(candidate);
+                                String purchaseKey = customerId + "_" + eventId + "_" + product;
+                                if (eventId == null || sold >= limited
+                                                || customerEventProductQty.getOrDefault(purchaseKey, 0) >= 2) {
+                                        continue;
+                                }
+                                flashItemId = candidate;
+                                productId = product;
+                        } else {
+                                productId = "P" + String.format("%05d",
+                                                1 + random.nextInt(NUM_GUARANTEED_ACTIVE_PRODUCTS));
+                        }
+
+                        String uniqueKey = customerId + "_" + flashItemId + "_" + productId;
+                        if (!usedReferences.add(uniqueKey)) {
+                                continue;
+                        }
+
+                        LocalDateTime createdAt = randomDateTime();
+                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
+                        String cartId = "CI" + String.format("%06d", written + 1);
+                        bw.write(String.join(",", cartId, createdAt.format(formatter),
+                                        updatedAt.format(formatter), customerId, flashItemId, productId, "1"));
+                        bw.newLine();
+                        written++;
+                }
+                bw.close();
+        }
+
         // =========================================================
         // FLASH EVENTS
         // =========================================================
@@ -335,10 +418,18 @@ public class DataGenerator {
                         LocalDateTime createdAt = randomDateTime();
                         LocalDateTime updatedAt = randomUpdatedAt(createdAt);
 
-                        LocalDateTime start = now.minusDays(random.nextInt(30))
-                                        .plusHours(random.nextInt(24));
-
-                        LocalDateTime end = start.plusHours(2 + random.nextInt(5));
+                        LocalDateTime start;
+                        LocalDateTime end;
+                        if (i <= Math.min(NUM_ACTIVE_EVENTS, count)) {
+                                start = now.minusHours(1 + i);
+                                end = now.plusHours(2 + i);
+                        } else if (i % 2 == 0) {
+                                start = now.plusDays(1 + random.nextInt(14)).plusHours(random.nextInt(24));
+                                end = start.plusHours(2 + random.nextInt(5));
+                        } else {
+                                end = now.minusHours(1 + random.nextInt(24 * 14));
+                                start = end.minusHours(2 + random.nextInt(5));
+                        }
 
                         String eventName = "Mega Flash Sale " + (i);
 
@@ -395,8 +486,7 @@ public class DataGenerator {
                         String eventId = "E" + String.format("%03d", e);
 
                         // Pick a real product
-                        String productId = "P" + String.format("%05d",
-                                        1 + random.nextInt(NUM_PRODUCTS));
+                        String productId = productIdForEvent(eventId);
 
                         double originalPrice = productPriceMap.get(productId);
 
@@ -458,8 +548,7 @@ public class DataGenerator {
                                         1 + random.nextInt(NUM_EVENTS));
 
                         // Pick a real product
-                        String productId = "P" + String.format("%05d",
-                                        1 + random.nextInt(NUM_PRODUCTS));
+                        String productId = productIdForEvent(eventId);
 
                         double originalPrice = productPriceMap.get(productId);
 

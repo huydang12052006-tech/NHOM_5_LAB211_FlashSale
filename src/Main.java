@@ -1,4 +1,5 @@
 import controller.AuthController;
+import controller.CartController;
 import controller.FlashSaleController;
 import controller.OrderController;
 import controller.ProductController;
@@ -11,6 +12,7 @@ import java.util.Map;
 import java.util.Scanner;
 import model.Entity.FlashSaleEvent;
 import model.Entity.FlashSaleItem;
+import model.Entity.CartItem;
 import model.Entity.Order;
 import model.Entity.OrderTransaction;
 import model.Entity.Product;
@@ -29,6 +31,7 @@ public class Main {
 
     private final Scanner scanner;
     private final AuthController authController;
+    private final CartController cartController;
     private final ProductController productController;
     private final FlashSaleController flashSaleController;
     private final OrderController orderController;
@@ -53,6 +56,7 @@ public class Main {
         this.simulatorView = new SimulatorView();
 
         this.authController = new AuthController(new repository.UserRepository(), new view.AuthView(scanner));
+        this.cartController = new CartController();
         this.productController = new ProductController(new repository.ProductRepository());
         this.flashSaleController = new FlashSaleController(
                 new repository.FlashSaleRepository(),
@@ -97,12 +101,12 @@ public class Main {
     private void printMainMenu() {
         System.out.println();
         System.out.println("===== FLASH SALE SYSTEM =====");
-        System.out.println("1. Guest");
-        System.out.println("2. Customer");
-        System.out.println("3. Seller");
-        System.out.println("4. Admin");
+        System.out.println("1. Browse as Guest");
+        System.out.println("2. Customer Shopping");
+        System.out.println("3. Seller Center");
+        System.out.println("4. Administration");
         System.out.println("0. Exit");
-        System.out.print("Choose actor: ");
+        System.out.print("Choose an option: ");
     }
 
     private void showGuestMenu() {
@@ -110,14 +114,14 @@ public class Main {
 
         while (!back) {
             System.out.println();
-            System.out.println("===== GUEST USE CASES =====");
-            System.out.println("1. Register account");
-            System.out.println("2. Login");
-            System.out.println("3. View events");
-            System.out.println("4. View products");
-            System.out.println("5. Search products");
-            System.out.println("6. Check order status");
-            System.out.println("0. Back");
+            System.out.println("===== WELCOME =====");
+            System.out.println("1. Create an Account");
+            System.out.println("2. Sign In");
+            System.out.println("3. Browse Flash Sales");
+            System.out.println("4. Browse Products");
+            System.out.println("5. Find Products");
+            System.out.println("6. Track an Order");
+            System.out.println("0. Back to Home");
             System.out.print("Choose: ");
 
             String choice = scanner.nextLine().trim();
@@ -142,6 +146,7 @@ public class Main {
             } else {
                 System.out.println("Invalid choice.");
             }
+                    
         }
     }
 
@@ -154,13 +159,14 @@ public class Main {
 
         while (!back) {
             System.out.println();
-            System.out.println("===== CUSTOMER USE CASES =====");
-            System.out.println("1. View events");
-            System.out.println("2. View products");
-            System.out.println("3. Search products");
-            System.out.println("4. Place order (cart)");
-            System.out.println("5. View my orders and status");
-            System.out.println("0. Logout & Back");
+            System.out.println("===== MY SHOPPING =====");
+            System.out.println("1. Browse Flash Sales");
+            System.out.println("2. Browse Products");
+            System.out.println("3. Find Products");
+            System.out.println("4. Add Products");
+            System.out.println("5. My Cart");
+            System.out.println("6. My Orders");
+            System.out.println("0. Sign Out");
             System.out.print("Choose: ");
 
             String choice = scanner.nextLine().trim();
@@ -174,6 +180,8 @@ public class Main {
             } else if ("4".equals(choice)) {
                 placeOrder();
             } else if ("5".equals(choice)) {
+                showCart();
+            } else if ("6".equals(choice)) {
                 viewMyOrders();
             } else if ("0".equals(choice)) {
                 authController.logout();
@@ -193,16 +201,16 @@ public class Main {
 
         while (!back) {
             System.out.println();
-            System.out.println("===== SELLER USE CASES =====");
-            System.out.println("1. View my products");
-            System.out.println("2. Add product");
-            System.out.println("3. Manage a product");
-            System.out.println("4. Delete product");
-            System.out.println("5. View events / add my product to an event");
-            System.out.println("6. Assign my product to an event");
-            System.out.println("7. Edit flash discount and limited quantity");
-            System.out.println("8. Review pending orders (confirm/cancel)");
-            System.out.println("0. Logout & Back");
+            System.out.println("===== SELLER CENTER =====");
+            System.out.println("1. My Products");
+            System.out.println("2. Add a Product");
+            System.out.println("3. Edit a Product");
+            System.out.println("4. Remove a Product");
+            System.out.println("5. Browse Sale Events");
+            System.out.println("6. Add a Product to a Sale");
+            System.out.println("7. Update Sale Price and Quantity");
+            System.out.println("8. Review Customer Orders");
+            System.out.println("0. Sign Out");
             System.out.print("Choose: ");
 
             String choice = scanner.nextLine().trim();
@@ -241,23 +249,23 @@ public class Main {
 
         while (!back) {
             System.out.println();
-            System.out.println("===== ADMIN USE CASES =====");
-            System.out.println("1. View system dashboard");
-            System.out.println("2. View inventory report");
-            System.out.println("3. View throughput report");
-            System.out.println("4. View negative stock report");
-            System.out.println("5. Configure thread count");
-            System.out.println("6. Select lock mechanism");
-            System.out.println("7. Run concurrent orders");
-            System.out.println("8. Measure TPS");
-            System.out.println("9. Measure retry rate");
-            System.out.println("10. Measure negative stock rate");
-            System.out.println("11. Export simulation result");
-            System.out.println("12. Create flash event");
-            System.out.println("13. Manage flash event (status and information)");
-            System.out.println("14. Manage account (approve, suspend, edit)");
-            System.out.println("15. View account");
-            System.out.println("0. Logout & Back");
+            System.out.println("===== ADMINISTRATION =====");
+            System.out.println("1. System Overview");
+            System.out.println("2. Stock Overview");
+            System.out.println("3. Sales Activity");
+            System.out.println("4. Stock Alerts");
+            System.out.println("5. Set Test Order Quantity");
+            System.out.println("6. Choose Order Processing Mode");
+            System.out.println("7. Run Order Test");
+            System.out.println("8. View Orders per Second");
+            System.out.println("9. View Retry Rate");
+            System.out.println("10. View Stock Issue Rate");
+            System.out.println("11. Save Test Report");
+            System.out.println("12. Create a Sale Event");
+            System.out.println("13. Edit a Sale Event");
+            System.out.println("14. Manage Accounts");
+            System.out.println("15. View Account Details");
+            System.out.println("0. Sign Out");
             System.out.print("Choose: ");
 
             String choice = scanner.nextLine().trim();
@@ -345,7 +353,7 @@ public class Main {
             System.out.println("\nWould you like to place an order? (y/n): ");
             String choice = scanner.nextLine().trim().toLowerCase();
             if ("y".equals(choice) || "yes".equals(choice)) {
-                shoppingCartCheckout(eventId);
+                addFlashSaleItemsToCart(eventId);
             }
         }
     }
@@ -409,13 +417,13 @@ public class Main {
         int orderType = orderView.inputOrderType();
 
         if (orderType == 2) {
-            orderRegularProduct();
+            addRegularProductsToCart();
         } else {
-            shopeeCheckout();
+            addFlashSaleItemsToCart(null);
         }
     }
 
-    private void shoppingCartCheckout(String selectedEventId) {
+    private void addFlashSaleItemsToCart(String selectedEventId) {
         try {
             User currentUser = authController.getCurrentUser();
             model.Entity.Customer customer = orderController.getCustomerByUserId(currentUser.getId());
@@ -441,7 +449,7 @@ public class Main {
             }
             List<FlashSaleItem> eventItems = flashSaleController.getActiveFlashItemsByEventId(eventId);
             flashSaleView.displayFlashSaleItemsInTable(eventItems, productController);
-            Map<String, Integer> cart = new LinkedHashMap<String, Integer>();
+            Map<String, Integer> selectedItems = new LinkedHashMap<String, Integer>();
             boolean adding = true;
             while (adding) {
                 String flashItemId = flashSaleView.inputFlashItemId();
@@ -451,26 +459,137 @@ public class Main {
                     System.out.println("[FAILED] Item is not in the selected event.");
                 } else {
                     int quantity = orderView.inputQuantity();
-                    cart.put(flashItemId, cart.getOrDefault(flashItemId, 0) + quantity);
+                    selectedItems.put(flashItemId, selectedItems.getOrDefault(flashItemId, 0) + quantity);
                 }
                 System.out.print("Add another product to this order? (y/n): ");
                 String choice = scanner.nextLine().trim().toLowerCase();
                 adding = "y".equals(choice) || "yes".equals(choice);
             }
-            if (cart.isEmpty()) {
-                System.out.println("Cart is empty.");
+            if (selectedItems.isEmpty()) {
+                System.out.println("No item was selected.");
                 return;
             }
-            String orderId = orderController.placeCartOrder(customer.getId(), cart, selectedLockMechanism);
-            PaymentMethod method = orderView.inputPaymentMethod();
-            if (orderController.createPayment(orderId, method)) {
-                System.out.println("[SUCCESS] Order created: " + orderId
-                        + ". Status is PENDING and waiting for seller review.");
-            } else {
-                System.out.println("[FAILED] Payment could not be saved for order " + orderId);
+            for (Map.Entry<String, Integer> entry : selectedItems.entrySet()) {
+                FlashSaleItem item = flashSaleController.getFlashItemById(entry.getKey());
+                cartController.addItem(customer.getId(), item.getId(), item.getProductId(), entry.getValue());
             }
+            chooseCartAction(customer.getId());
         } catch (NumberFormatException e) {
             orderView.showPlaceOrderError("Quantity, discount, and limit must be numbers.");
+        }
+    }
+
+    private void addRegularProductsToCart() {
+        List<Product> activeProducts = new java.util.ArrayList<Product>();
+        for (Product product : productController.getAllProducts()) {
+            if (product.getStatus() == SaleStatus.ACTIVE) {
+                activeProducts.add(product);
+            }
+        }
+        addRegularProductsToCart(activeProducts);
+    }
+
+    private void addRegularProductsToCart(List<Product> selectableProducts) {
+        try {
+            User currentUser = authController.getCurrentUser();
+            model.Entity.Customer customer = orderController.getCustomerByUserId(currentUser.getId());
+            Map<String, Integer> selectedProducts = new LinkedHashMap<String, Integer>();
+            boolean adding = true;
+            while (adding) {
+                productView.displayProducts(selectableProducts);
+                String productId = orderView.inputProductId();
+                Product product = productController.getProductById(productId);
+                if (product == null || product.getStatus() != SaleStatus.ACTIVE
+                        || !containsProduct(selectableProducts, productId)) {
+                    System.out.println("[FAILED] Product not found or not active.");
+                } else {
+                    int quantity = orderView.inputQuantity();
+                    selectedProducts.put(productId, selectedProducts.getOrDefault(productId, 0) + quantity);
+                }
+                System.out.print("Add another regular product? (y/n): ");
+                String choice = scanner.nextLine().trim().toLowerCase();
+                adding = "y".equals(choice) || "yes".equals(choice);
+            }
+            if (selectedProducts.isEmpty()) {
+                return;
+            }
+            for (Map.Entry<String, Integer> entry : selectedProducts.entrySet()) {
+                cartController.addItem(customer.getId(), null, entry.getKey(), entry.getValue());
+            }
+            chooseCartAction(customer.getId());
+        } catch (NumberFormatException e) {
+            orderView.showPlaceOrderError("Quantity must be a number.");
+        }
+    }
+
+    private void chooseCartAction(String customerId) {
+        System.out.println("1. Add selected products to cart");
+        System.out.println("2. Pay now");
+        System.out.print("Choose: ");
+        String choice = scanner.nextLine().trim();
+        if ("1".equals(choice)) {
+            System.out.println("[SUCCESS] Products were saved in your cart.");
+        } else if ("2".equals(choice)) {
+            checkoutCart(customerId);
+        } else {
+            System.out.println("[INFO] Products were saved in your cart. You can checkout later.");
+        }
+    }
+
+    private void showCart() {
+        model.Entity.Customer customer = orderController.getCustomerByUserId(authController.getCurrentUser().getId());
+        List<CartItem> items = cartController.getCartByCustomer(customer.getId());
+        System.out.println("\n===== MY CART =====");
+        if (items.isEmpty()) {
+            System.out.println("Cart is empty.");
+            return;
+        }
+        double total = 0.0;
+        for (CartItem item : items) {
+            Product product = item.getProductId() == null ? null : productController.getProductById(item.getProductId());
+            String name = product == null ? "Unknown product" : product.getName();
+            double price = 0.0;
+            if (item.getFlashItemId() != null) {
+                FlashSaleItem flashItem = flashSaleController.getFlashItemById(item.getFlashItemId());
+                price = flashItem == null ? 0.0 : flashItem.getFlashPrice();
+            } else if (product != null) {
+                price = product.getOriginalPrice();
+            }
+            total += price * item.getQuantity();
+            System.out.printf("%s | %s | qty=%d | unit=%.0f | subtotal=%.0f%n",
+                    item.getId(), name, item.getQuantity(), price, price * item.getQuantity());
+        }
+        System.out.printf("Cart total: %.0f%n", total);
+        System.out.println("1. Checkout");
+        System.out.println("2. Remove an item");
+        System.out.println("0. Back");
+        System.out.print("Choose: ");
+        String choice = scanner.nextLine().trim();
+        if ("1".equals(choice)) {
+            checkoutCart(customer.getId());
+        } else if ("2".equals(choice)) {
+            System.out.print("Cart item ID: ");
+            String cartItemId = scanner.nextLine().trim();
+            System.out.println(cartController.removeItem(customer.getId(), cartItemId)
+                    ? "[SUCCESS] Item removed from cart." : "[FAILED] Cart item not found.");
+        }
+    }
+
+    private void checkoutCart(String customerId) {
+        try {
+            List<CartItem> items = cartController.getCartByCustomer(customerId);
+            List<String> orderIds = orderController.checkoutCart(customerId, items, selectedLockMechanism);
+            PaymentMethod method = orderView.inputPaymentMethod();
+            boolean paymentsSaved = true;
+            for (String orderId : orderIds) {
+                paymentsSaved = orderController.createPayment(orderId, method) && paymentsSaved;
+            }
+            if (paymentsSaved) {
+                cartController.clearCart(customerId);
+                System.out.println("[SUCCESS] Checkout completed. Pending order(s): " + orderIds);
+            } else {
+                System.out.println("[FAILED] Payment could not be saved. Cart was kept.");
+            }
         } catch (IOException e) {
             orderView.showPlaceOrderError("IO error: " + e.getMessage());
         } catch (FlashSaleException e) {
@@ -542,7 +661,9 @@ public class Main {
 
 
     private void viewProducts() {
-        productView.displayProducts(productController.getAllProducts());
+        List<Product> products = productController.getAllProducts();
+        productView.displayProducts(products);
+        offerPlaceOrderFromProducts(products);
     }
 
     private void viewSellerProducts() {
@@ -551,7 +672,30 @@ public class Main {
 
     private void searchProducts() {
         String keyword = productView.inputKeyword();
-        productView.displaySearchResults(productController.searchProducts(keyword));
+        List<Product> results = productController.searchProducts(keyword);
+        productView.displaySearchResults(results);
+        offerPlaceOrderFromProducts(results);
+    }
+
+    private void offerPlaceOrderFromProducts(List<Product> products) {
+        User currentUser = authController.getCurrentUser();
+        if (currentUser == null || currentUser.getRole() != UserRole.CUSTOMER || products.isEmpty()) {
+            return;
+        }
+        System.out.print("Add products from this list to cart or pay now? (y/n): ");
+        String choice = scanner.nextLine().trim().toLowerCase();
+        if ("y".equals(choice) || "yes".equals(choice)) {
+            addRegularProductsToCart(products);
+        }
+    }
+
+    private boolean containsProduct(List<Product> products, String productId) {
+        for (Product product : products) {
+            if (product.getId().equals(productId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void checkOrderStatus() {
@@ -1136,6 +1280,7 @@ public class Main {
             }
         }
         productView.displayProducts(activeProducts);
+        offerPlaceOrderFromProducts(activeProducts);
     }
 
     private void shopeeCheckout() {

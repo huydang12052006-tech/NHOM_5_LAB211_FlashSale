@@ -1,11 +1,11 @@
 package repository;
 
+import java.util.ArrayList;
+import java.util.List;
 import model.Entity.Product;
-
 
 public class ProductRepository extends CsvRepository<Product> {
 
-    // Đường dẫn tương đối trỏ tới file data do DataGenerator tạo ra
     public ProductRepository() {
         super("data/products.csv");
     }
@@ -27,61 +27,41 @@ public class ProductRepository extends CsvRepository<Product> {
         }
     }
 
-    // public List<Product> findAll() {
-    // List<Product> products = new ArrayList<>();
-    // File file = new File(filePath);
+    /**
+     * Searches products by keyword matching id, name, or category (case-insensitive).
+     */
+    public List<Product> searchByKeyword(String keyword) {
+        List<Product> result = new ArrayList<Product>();
 
-    // if (!file.exists()) {
-    // System.out.println("[Thong bao]: Khong tim thay file du lieu tai " +
-    // filePath);
-    // return products;
-    // }
+        if (keyword == null || keyword.isEmpty()) {
+            return result;
+        }
 
-    // try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-    // String line;
-    // while ((line = br.readLine()) != null) {
-    // if (line.trim().isEmpty()) {
-    // continue;
-    // }
-    // try {
-    // Product p = new Product();
-    // p.fromCsvLine(line);
-    // products.add(p);
-    // } catch (Exception e) {
-    // // Bo qua dong loi neu co sai sot dinh dang
-    // continue;
-    // }
-    // }
-    // } catch (IOException e) {
-    // System.out.println("[Loi]: Khong the doc file san pham: " + e.getMessage());
-    // }
-    // return products;
-    // }
+        String lower = keyword.toLowerCase();
 
-    // public void save(Product entity) {
-    //     List<Product> list = super.findAll();
-    //     boolean exists = false;
+        for (Product product : findAll()) {
+            if (containsIgnoreCase(product.getId(), lower)
+                    || containsIgnoreCase(product.getName(), lower)
+                    || containsIgnoreCase(product.getCategory(), lower)) {
+                result.add(product);
+            }
+        }
 
-    //     // Neu da ton tai ID thi ghi de (Update), neu chua thi them vao cuoi (Create)
-    //     for (int i = 0; i < list.size(); i++) {
-    //         if (list.get(i).getId().equals(entity.getId())) {
-    //             list.set(i, entity);
-    //             exists = true;
-    //             break;
-    //         }
-    //     }
-    //     if (!exists) {
-    //         list.add(entity);
-    //     }
+        return result;
+    }
 
-    //     // Ghi lai toan bo danh sach moi vao file CSV
-    //     try (java.io.BufferedWriter bw = new java.io.BufferedWriter(new java.io.FileWriter(filePath))) {
-    //         for (Product p : list) {
-    //             bw.write(p.toCsvLine());
-    //             bw.newLine();
-    //         }
-    //     } catch (java.io.IOException e) {
-    //         System.out.println("[Loi]: Khong the ghi du lieu vao file san pham: " + e.getMessage());
-    //     }
-    // }
-} // Dấu đóng class phải nằm ở cuối cùng như thế này
+    public String generateNextId() {
+        int maxNumber = 0;
+        for (Product product : findAll()) {
+            String id = product.getId();
+            if (id != null && id.matches("P\\d+")) {
+                maxNumber = Math.max(maxNumber, Integer.parseInt(id.substring(1)));
+            }
+        }
+        return String.format("P%05d", maxNumber + 1);
+    }
+
+    private boolean containsIgnoreCase(String value, String keyword) {
+        return value != null && value.toLowerCase().contains(keyword);
+    }
+}

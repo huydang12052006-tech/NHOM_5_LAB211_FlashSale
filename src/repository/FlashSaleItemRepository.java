@@ -279,6 +279,23 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
         // nếu retry vượt mức, báo lỗi rõ ràng
         throw new VersionConflictException("Optimistic lock failed after " + MAX_RETRY + " retries for " + flashItemId);
     }
+
+    /**
+     * Generates the next flash item ID based on the max existing FIxxxxx.
+     */
+    public String generateNextId() {
+        int maxNumber = 0;
+
+        for (FlashSaleItem item : findAll()) {
+            String id = item.getId();
+            if (id != null && id.matches("FI\\d+")) {
+                maxNumber = Math.max(maxNumber, Integer.parseInt(id.substring(2)));
+            }
+        }
+
+        return String.format("FI%05d", maxNumber + 1);
+    }
+
     private FlashSaleItem findInList(List<FlashSaleItem> items, String flashItemId) {
         for (FlashSaleItem item : items) {
             if (item.getId().equals(flashItemId)) {
@@ -289,3 +306,4 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
         return null;
     }
 }
+

@@ -16,7 +16,7 @@
 
 ---
 
-### 🚀 Simulating Real-World Flash Sale Systems
+### 🚀 E-Commerce Flash Sale Simulation
 
 ### Preventing Overselling under Massive Concurrent Orders
 

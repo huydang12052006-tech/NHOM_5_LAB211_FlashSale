@@ -1,8 +1,11 @@
 package controller;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
+
 import model.Entity.Product;
-import model.Enum.SaleStatus;
 import repository.ProductRepository;
 
 public class ProductController {
@@ -13,17 +16,49 @@ public class ProductController {
         this.productRepository = productRepository;
     }
 
+    // ==================================
+    // Read
+    // ==================================
+    public List<Product> getAllProducts() {
+        return productRepository.findAll();
+    }
+
+    public Product getProductById(String id) {
+        return productRepository.findById(id);
+    }
+
+    public List<Product> searchProducts(String keyword) {
+        return productRepository.searchByKeyword(keyword);
+    }
+
+    public List<Product> getProductsBySellerId(String sellerId) {
+        List<Product> result = new ArrayList<Product>();
+        for (Product product : productRepository.findAll()) {
+            if (sellerId != null && sellerId.equalsIgnoreCase(product.getSellerId())) {
+                result.add(product);
+            }
+        }
+        return result;
+    }
+
+    // ==================================
+    // Create
+    // ==================================
     public boolean createProduct(Product newProduct) {
 
-        boolean idExists =
-                productRepository.findAll()
-                        .stream()
-                        .anyMatch(p ->
-                                p.getId()
-                                 .equalsIgnoreCase(
-                                         newProduct.getId()));
+        if (newProduct.getId() == null || newProduct.getId().trim().isEmpty()) {
+            newProduct.setId(productRepository.generateNextId());
+        }
 
-        if (idExists) {
+        boolean exists = false;
+
+        for (Product p : productRepository.findAll()) {
+            if (p.getId().equalsIgnoreCase(newProduct.getId())) {
+                exists = true;
+                break;
+            }
+        }
+        if (exists) {
             return false;
         }
 
@@ -35,34 +70,61 @@ public class ProductController {
         return true;
     }
 
-    public boolean deleteProduct(String id) {
+    public boolean createProduct(Product newProduct, String sellerId) {
+        newProduct.setId(productRepository.generateNextId());
+        newProduct.setSellerId(sellerId);
+        return createProduct(newProduct);
+    }
 
-        Product targetProduct = null;
+    // ==================================
+    // Update
+    // ==================================
+    public boolean updateProduct(Product product) {
+        product.setUpdatedAt(LocalDateTime.now());
+        return productRepository.update(product);
+    }
 
-        for (Product p : productRepository.findAll()) {
+    public boolean updateProductInfo(String id, String name, String category) {
+        Product product = productRepository.findById(id);
 
-            if (p.getId().equalsIgnoreCase(id)) {
-
-                targetProduct = p;
-
-                break;
-            }
-        }
-
-        if (targetProduct == null) {
+        if (product == null) {
             return false;
         }
 
-        targetProduct.setStatus(
-                SaleStatus.DISABLED
-        );
+        product.setName(name);
+        product.setCategory(category);
+        product.setUpdatedAt(LocalDateTime.now());
 
-        targetProduct.setUpdatedAt(
-                LocalDateTime.now()
-        );
+        return productRepository.update(product);
+    }
 
-        return productRepository.update(
-                targetProduct
-        );
+    public boolean updateProductPrice(String id, double price) {
+        Product product = productRepository.findById(id);
+
+        if (product == null) {
+            return false;
+        }
+
+        product.setOriginalPrice(price);
+        product.setUpdatedAt(LocalDateTime.now());
+
+        return productRepository.update(product);
+    }
+
+    // ==================================
+    // Delete
+    // ==================================
+    public boolean deleteProduct(String id) {
+
+        if (id == null || id.trim().isEmpty()) {
+            return false;
+        }
+
+        try {
+            return productRepository.delete(id.trim());
+        } catch (IOException e) {
+            System.out.println("[ERROR] " + e.getMessage());
+            return false;
+        }
     }
 }

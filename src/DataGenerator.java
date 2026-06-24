@@ -1,3 +1,4 @@
+
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
@@ -8,6 +9,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -20,6 +23,7 @@ public class DataGenerator {
         private static final Random random = new Random();
 
         private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+
 
         private static final String[] FIRST_NAMES = {
                         "Nguyen", "Tran", "Le", "Pham", "Hoang",
@@ -204,7 +208,12 @@ public class DataGenerator {
         private static final int NUM_FLASH_ITEMS = 1000;
         private static final int NUM_CUSTOMERS = 2500;
         private static final int NUM_ORDERS = 3000;
-        private static final int NUM_USERS = NUM_CUSTOMERS + 100;
+        private static final int NUM_SELLERS = 99;
+        private static final int NUM_ADMINS = 1;
+        private static final int NUM_USERS = NUM_CUSTOMERS + NUM_SELLERS + NUM_ADMINS;
+        private static final int NUM_ACTIVE_EVENTS = 10;
+        private static final int NUM_GUARANTEED_ACTIVE_PRODUCTS = 100;
+        private static final int NUM_CART_ITEMS = 300;
 
         public static void main(String[] args) {
 
@@ -240,6 +249,9 @@ public class DataGenerator {
                         // Phase 9: Generate OrderTransactions CSV
                         generateOrderTransactions();
 
+                        // Phase 10: Generate saved customer-cart rows
+                        generateCartItems(NUM_CART_ITEMS);
+
                         System.out.println("Generate CSV SUCCESS!");
 
                 } catch (Exception e) {
@@ -255,7 +267,7 @@ public class DataGenerator {
 
                 BufferedWriter bw = new BufferedWriter(new FileWriter("data/products.csv"));
 
-                bw.write("id,createdAt,updatedAt,name,category,originalPrice,stockQty,version,status");
+                bw.write("id,createdAt,updatedAt,name,category,originalPrice,stockQty,version,status,sellerId");
                 bw.newLine();
 
                 for (int i = 1; i <= count; i++) {
@@ -283,7 +295,10 @@ public class DataGenerator {
                         int version = random.nextInt(20);
 
                         // Product status: ACTIVE or DISABLED (not UPCOMING/ENDED)
-                        String status = random.nextInt(10) < 8 ? "ACTIVE" : "DISABLED";
+                        String status = i <= NUM_GUARANTEED_ACTIVE_PRODUCTS || random.nextInt(10) < 8
+                                        ? "ACTIVE" : "DISABLED";
+                        String sellerId = "U" + String.format("%05d",
+                                        NUM_CUSTOMERS + 1 + random.nextInt(NUM_SELLERS));
 
                         // Store price for FlashItem reference
                         productPriceMap.put(id, price);
@@ -297,11 +312,88 @@ public class DataGenerator {
                                         String.valueOf((long) price),
                                         String.valueOf(stockQty),
                                         String.valueOf(version),
-                                        status));
+                                        status,
+                                        sellerId));
 
                         bw.newLine();
                 }
 
+                bw.close();
+        }
+
+        private static String productIdForEvent(String eventId) {
+                int eventNumber = Integer.parseInt(eventId.substring(1));
+                if (eventNumber <= NUM_ACTIVE_EVENTS) {
+                        return "P" + String.format("%05d",
+                                        1 + random.nextInt(NUM_GUARANTEED_ACTIVE_PRODUCTS));
+                }
+                return "P" + String.format("%05d", 1 + random.nextInt(NUM_PRODUCTS));
+        }
+
+        // =========================================================
+        // SAVED CART ITEMS
+        // =========================================================
+
+        private static void generateCartItems(int count) throws IOException {
+                BufferedWriter bw = new BufferedWriter(new FileWriter("data/cart_items.csv"));
+                bw.write("id,createdAt,updatedAt,customerId,flashItemId,productId,quantity");
+                bw.newLine();
+
+                List<String> activeFlashItems = new ArrayList<>();
+                for (Map.Entry<String, List<String>> entry : eventFlashItemsMap.entrySet()) {
+                        int eventNumber = Integer.parseInt(entry.getKey().substring(1));
+                        if (eventNumber <= NUM_ACTIVE_EVENTS) {
+                                activeFlashItems.addAll(entry.getValue());
+                        }
+                }
+
+                java.util.Set<String> usedReferences = new java.util.HashSet<>();
+                int written = 0;
+                int attempts = 0;
+                while (written < count && attempts++ < count * 20) {
+                        String customerId = "C" + String.format("%05d",
+                                        1 + random.nextInt(NUM_CUSTOMERS));
+                        boolean flashCartItem = !activeFlashItems.isEmpty() && random.nextBoolean();
+                        String flashItemId = "";
+                        String productId;
+
+                        if (flashCartItem) {
+                                String candidate = activeFlashItems.get(random.nextInt(activeFlashItems.size()));
+                                String eventId = null;
+                                for (Map.Entry<String, List<String>> entry : eventFlashItemsMap.entrySet()) {
+                                        if (entry.getValue().contains(candidate)) {
+                                                eventId = entry.getKey();
+                                                break;
+                                        }
+                                }
+                                String product = flashItemProductMap.get(candidate);
+                                int sold = flashItemSoldQtyMap.getOrDefault(candidate, 0);
+                                int limited = flashItemLimitedQtyMap.get(candidate);
+                                String purchaseKey = customerId + "_" + eventId + "_" + product;
+                                if (eventId == null || sold >= limited
+                                                || customerEventProductQty.getOrDefault(purchaseKey, 0) >= 2) {
+                                        continue;
+                                }
+                                flashItemId = candidate;
+                                productId = product;
+                        } else {
+                                productId = "P" + String.format("%05d",
+                                                1 + random.nextInt(NUM_GUARANTEED_ACTIVE_PRODUCTS));
+                        }
+
+                        String uniqueKey = customerId + "_" + flashItemId + "_" + productId;
+                        if (!usedReferences.add(uniqueKey)) {
+                                continue;
+                        }
+
+                        LocalDateTime createdAt = randomDateTime();
+                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
+                        String cartId = "CI" + String.format("%06d", written + 1);
+                        bw.write(String.join(",", cartId, createdAt.format(formatter),
+                                        updatedAt.format(formatter), customerId, flashItemId, productId, "1"));
+                        bw.newLine();
+                        written++;
+                }
                 bw.close();
         }
 
@@ -326,10 +418,18 @@ public class DataGenerator {
                         LocalDateTime createdAt = randomDateTime();
                         LocalDateTime updatedAt = randomUpdatedAt(createdAt);
 
-                        LocalDateTime start = now.minusDays(random.nextInt(30))
-                                        .plusHours(random.nextInt(24));
-
-                        LocalDateTime end = start.plusHours(2 + random.nextInt(5));
+                        LocalDateTime start;
+                        LocalDateTime end;
+                        if (i <= Math.min(NUM_ACTIVE_EVENTS, count)) {
+                                start = now.minusHours(1 + i);
+                                end = now.plusHours(2 + i);
+                        } else if (i % 2 == 0) {
+                                start = now.plusDays(1 + random.nextInt(14)).plusHours(random.nextInt(24));
+                                end = start.plusHours(2 + random.nextInt(5));
+                        } else {
+                                end = now.minusHours(1 + random.nextInt(24 * 14));
+                                start = end.minusHours(2 + random.nextInt(5));
+                        }
 
                         String eventName = "Mega Flash Sale " + (i);
 
@@ -386,8 +486,7 @@ public class DataGenerator {
                         String eventId = "E" + String.format("%03d", e);
 
                         // Pick a real product
-                        String productId = "P" + String.format("%05d",
-                                        1 + random.nextInt(NUM_PRODUCTS));
+                        String productId = productIdForEvent(eventId);
 
                         double originalPrice = productPriceMap.get(productId);
 
@@ -449,8 +548,7 @@ public class DataGenerator {
                                         1 + random.nextInt(NUM_EVENTS));
 
                         // Pick a real product
-                        String productId = "P" + String.format("%05d",
-                                        1 + random.nextInt(NUM_PRODUCTS));
+                        String productId = productIdForEvent(eventId);
 
                         double originalPrice = productPriceMap.get(productId);
 
@@ -529,7 +627,7 @@ public class DataGenerator {
                 bwOrders.write("id,createdAt,updatedAt,customerId,eventId,totalAmount,status,lockMechanism");
                 bwOrders.newLine();
 
-                bwDetails.write("id,createdAt,updatedAt,orderId,flashItemId,quantity,unitPrice,subTotal");
+                bwDetails.write("id,createdAt,updatedAt,orderId,flashItemId,productId,quantity,unitPrice,subTotal");
                 bwDetails.newLine();
 
                 int detailCounter = 0;
@@ -649,6 +747,7 @@ public class DataGenerator {
                                                 updatedAt.format(formatter),
                                                 orderId,
                                                 flashItemId,
+                                                productId,
                                                 String.valueOf(actualQuantity),
                                                 String.valueOf((long) unitPrice),
                                                 String.valueOf((long) subTotal)));
@@ -842,14 +941,17 @@ public class DataGenerator {
                                         fullName != null ? fullName : randomFullName(),
                                         i);
 
-                        // Simulated bcrypt-style hash
-                        String passwordHash = "$2a$10$" + randomAlphanumeric(53);
+                        // Real SHA-256 hash: raw password is "pass" + id (e.g. "passU00001")
+                        String rawPassword = "pass" + id;
+                        String passwordHash = sha256Hash(rawPassword);
 
                         String role;
                         if (i <= NUM_CUSTOMERS) {
                                 role = "CUSTOMER";
+                        } else if (i <= NUM_CUSTOMERS + NUM_SELLERS) {
+                                role = "SELLER";
                         } else {
-                                role = random.nextInt(100) < 75 ? "SELLER" : "ADMIN";
+                                role = "ADMIN";
                         }
 
                         boolean active = random.nextInt(10) < 9; // 90% active
@@ -1063,7 +1165,7 @@ public class DataGenerator {
 
         /**
          * Generates a random alphanumeric string of the given length.
-         * Used for simulating password hashes.
+         * Used for random data generation (not password hashing).
          */
         private static String randomAlphanumeric(int length) {
 
@@ -1073,5 +1175,23 @@ public class DataGenerator {
                         sb.append(chars.charAt(random.nextInt(chars.length())));
                 }
                 return sb.toString();
+        }
+
+        /**
+         * Hashes the given raw text using SHA-256 and returns the hex string.
+         * Raw password convention: "pass" + userId (e.g. "passU00001").
+         */
+        private static String sha256Hash(String raw) {
+                try {
+                        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                        byte[] bytes = digest.digest(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        StringBuilder sb = new StringBuilder();
+                        for (byte b : bytes) {
+                                sb.append(String.format("%02x", b));
+                        }
+                        return sb.toString();
+                } catch (NoSuchAlgorithmException e) {
+                        throw new RuntimeException("SHA-256 not available", e);
+                }
         }
 }

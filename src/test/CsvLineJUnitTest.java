@@ -1,3 +1,5 @@
+package test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -63,11 +65,11 @@ public class CsvLineJUnitTest {
         Product product = new Product(
                 "P001", CREATED_AT, UPDATED_AT,
                 "Laptop Pro", "Electronics", 1500.0, 25, 3,
-                SaleStatus.ACTIVE);
+                SaleStatus.ACTIVE, "U02501");
 
         assertEquals(
                 "P001,2026-01-02T03:04:05,2026-02-03T04:05:06,"
-                        + "Laptop Pro,Electronics,1500.0,25,3,ACTIVE",
+                        + "Laptop Pro,Electronics,1500.0,25,3,ACTIVE,U02501",
                 product.toCsvLine()
         );
     }
@@ -77,7 +79,7 @@ public class CsvLineJUnitTest {
         Product product = new Product();
         product.fromCsvLine(
                 "P002,2026-01-02T03:04:05,2026-02-03T04:05:06,"
-                        + "Camera,Photo,899.99,10,4,DISABLED");
+                        + "Camera,Photo,899.99,10,4,DISABLED,U02502");
 
         assertBaseFields(product, "P002");
         assertEquals("Camera", product.getName());
@@ -86,6 +88,7 @@ public class CsvLineJUnitTest {
         assertEquals(10, product.getStockQty());
         assertEquals(4, product.getVersion());
         assertEquals(SaleStatus.DISABLED, product.getStatus());
+        assertEquals("U02502", product.getSellerId());
     }
 
     @Test
@@ -183,11 +186,11 @@ public class CsvLineJUnitTest {
     void orderDetailToCsvLine() {
         OrderDetail detail = new OrderDetail(
                 "OD001", CREATED_AT, UPDATED_AT,
-                "O001", "FI001", 2, 1200.0, 2400.0);
+                "O001", "FI001", "P001", 2, 1200.0, 2400.0);
 
         assertEquals(
                 "OD001,2026-01-02T03:04:05,2026-02-03T04:05:06,"
-                        + "O001,FI001,2,1200.0,2400.0",
+                        + "O001,FI001,P001,2,1200.0,2400.0",
                 detail.toCsvLine()
         );
     }
@@ -197,14 +200,28 @@ public class CsvLineJUnitTest {
         OrderDetail detail = new OrderDetail();
         detail.fromCsvLine(
                 "OD002,2026-01-02T03:04:05,2026-02-03T04:05:06,"
-                        + "O002,FI002,3,99.9,299.7");
+                        + "O002,FI002,P002,3,99.9,299.7");
 
         assertBaseFields(detail, "OD002");
         assertEquals("O002", detail.getOrderId());
         assertEquals("FI002", detail.getFlashItemId());
+        assertEquals("P002", detail.getProductId());
         assertEquals(3, detail.getQuantity());
         assertEquals(99.9, detail.getUnitPrice(), DELTA);
         assertEquals(299.7, detail.getSubTotal(), DELTA);
+    }
+
+    @Test
+    void regularOrderUsesEmptyEventAndFlashItem() {
+        Order order = new Order("O003", CREATED_AT, UPDATED_AT, "C003", null,
+                500.0, OrderStatus.PENDING, LockMechanism.NO_LOCK);
+        OrderDetail detail = new OrderDetail("OD003", CREATED_AT, UPDATED_AT,
+                "O003", null, "P003", 1, 500.0, 500.0);
+
+        assertEquals("O003,2026-01-02T03:04:05,2026-02-03T04:05:06,C003,,500.0,PENDING,NO_LOCK",
+                order.toCsvLine());
+        assertEquals("OD003,2026-01-02T03:04:05,2026-02-03T04:05:06,O003,,P003,1,500.0,500.0",
+                detail.toCsvLine());
     }
 
     @Test

@@ -27,10 +27,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import repository.FlashSaleItemRepository;
 
-public class LockMechanismJUnitTest {
+public class SynchronizedLockJUnitTest {
 
     private static final Path TEST_DIR =
-            Paths.get("data", "test_lock_mechanism_junit");
+            Paths.get("data", "synchronized_lock_junit_test");
     private static final LocalDateTime CREATED_AT =
             LocalDateTime.of(2026, 1, 2, 3, 4, 5);
     private static final LocalDateTime UPDATED_AT =
@@ -60,133 +60,60 @@ public class LockMechanismJUnitTest {
     }
 
     @Test
-    void noLockSellsWhenStockIsAvailable() throws Exception {
+    void testOnePersonOrdersOneProduct() throws Exception {
         FlashSaleItemRepository repository =
-                prepareRepository("no_lock.csv", 2, 10, 7);
+                prepareRepository("synchronized_single.csv", 2, 10, 1);
 
-        assertTrue(repository.sellWithNoLock("FI_LOCK", 3));
+        assertTrue(repository.sellWithSynchronized("FI_LOCK", 1));
 
-        assertFlashItemState(repository, 5, 7);
+        FlashSaleItem item = repository.findById("FI_LOCK");
+        assertNotNull(item);
+        assertEquals(3, item.getSoldQty());
+        assertEquals(1, item.getVersion());
     }
 
     @Test
-    void synchronizedLockSellsWhenStockIsAvailable() throws Exception {
+    void testOnePersonOrdersExceedingQuantity() throws Exception {
         FlashSaleItemRepository repository =
-                prepareRepository("synchronized.csv", 2, 10, 7);
+                prepareRepository("synchronized_exceed.csv", 2, 10, 1);
 
-        assertTrue(repository.sellWithSynchronized("FI_LOCK", 3));
-
-        assertFlashItemState(repository, 5, 7);
-    }
-
-    @Test
-    void fileLockSellsWhenStockIsAvailable() throws Exception {
-        FlashSaleItemRepository repository =
-                prepareRepository("file_lock.csv", 2, 10, 7);
-
-        assertTrue(repository.sellWithFileLock("FI_LOCK", 3));
-
-        assertFlashItemState(repository, 5, 7);
-    }
-
-    @Test
-    void optimisticLockSellsAndIncrementsVersionWhenStockIsAvailable()
-            throws Exception {
-
-        FlashSaleItemRepository repository =
-                prepareRepository("optimistic_lock.csv", 2, 10, 7);
-
-        assertTrue(repository.sellWithOptimisticLock("FI_LOCK", 3));
-
-        assertFlashItemState(repository, 5, 8);
-    }
-
-    @Test
-    void noLockAllowsTwoThreadsToSellSameLastStock()
-            throws Exception {
-
-        FlashSaleItemRepository repository =
-                prepareRepository("no_lock_concurrent.csv", 0, 6, 1);
-
-        ConcurrentResult result = runTwoConcurrentSales(
-                new SaleAction() {
-                    @Override
-                    public boolean sell() throws Exception {
-                        return repository.sellWithNoLock("FI_LOCK", 6);
-                    }
-                }
-        );
-
-        // Without lock, they may both succeed (oversell) or one may fail with OutOfStockException if run sequentially.
-        assertTrue(result.unexpectedFailures.isEmpty(), "Unexpected failures: " + result.unexpectedFailures);
-        int successes = result.successCount.get();
-        int expectedFails = result.expectedFailures.size();
-        assertEquals(2, successes + expectedFails);
-
-        for (Throwable failure : result.expectedFailures) {
-            assertTrue(failure instanceof OutOfStockException);
-        }
-        assertFlashItemState(repository, 6, 1);
-    }
-
-    @Test
-    void synchronizedLockDoesNotOversellWhenTwoThreadsBuySameLastStock()
-            throws Exception {
-
-        FlashSaleItemRepository repository =
-                prepareRepository("synchronized_concurrent.csv", 0, 6, 1);
-
-        ConcurrentResult result = runTwoConcurrentSales(
-                new SaleAction() {
-                    @Override
-                    public boolean sell() throws Exception {
-                        return repository.sellWithSynchronized("FI_LOCK", 6);
-                    }
-                }
-        );
-
-        assertEquals(1, result.successCount.get());
-        assertEquals(1, result.expectedFailures.size());
-        assertEquals(0, result.unexpectedFailures.size());
-        assertFlashItemState(repository, 6, 1);
-    }
-
-    @Test
-    void optimisticLockDoesNotOversellWhenTwoThreadsBuySameLastStock()
-            throws Exception {
-
-        FlashSaleItemRepository repository =
-                prepareRepository("optimistic_concurrent.csv", 0, 6, 1);
-
-        ConcurrentResult result = runTwoConcurrentSales(
-                new SaleAction() {
-                    @Override
-                    public boolean sell() throws Exception {
-                        return repository.sellWithOptimisticLock("FI_LOCK", 6);
-                    }
-                }
-        );
-
-        assertEquals(1, result.successCount.get());
-        assertEquals(1, result.expectedFailures.size());
-        assertEquals(0, result.unexpectedFailures.size());
-        assertFlashItemState(repository, 6, 2);
-    }
-
-    @Test
-    void fileLockRejectsSecondSaleWhenStockIsAlreadyConsumed()
-            throws Exception {
-
-        FlashSaleItemRepository repository =
-                prepareRepository("file_lock_out_of_stock.csv", 0, 6, 1);
-
-        assertTrue(repository.sellWithFileLock("FI_LOCK", 6));
         assertThrows(
                 OutOfStockException.class,
-                () -> repository.sellWithFileLock("FI_LOCK", 1)
+                () -> repository.sellWithSynchronized("FI_LOCK", 9)
         );
 
-        assertFlashItemState(repository, 6, 1);
+        FlashSaleItem item = repository.findById("FI_LOCK");
+        assertNotNull(item);
+        assertEquals(2, item.getSoldQty());
+        assertEquals(1, item.getVersion());
+    }
+
+    @Test
+    void testTwoPeopleConcurrentlyOrderLastProduct() throws Exception {
+        // limit = 1, sold = 0 -> only 1 remaining.
+        // Both try to buy 1 item.
+        FlashSaleItemRepository repository =
+                prepareRepository("synchronized_concurrent.csv", 0, 1, 1);
+
+        ConcurrentResult result = runTwoConcurrentSales(
+                new SaleAction() {
+                    @Override
+                    public boolean sell() throws Exception {
+                        return repository.sellWithSynchronized("FI_LOCK", 1);
+                    }
+                }
+        );
+
+        // With synchronized lock, only one thread can succeed, and the other gets OutOfStockException.
+        assertEquals(1, result.successCount.get());
+        assertEquals(1, result.expectedFailures.size());
+        assertTrue(result.expectedFailures.get(0) instanceof OutOfStockException);
+        assertEquals(0, result.unexpectedFailures.size());
+        
+        FlashSaleItem item = repository.findById("FI_LOCK");
+        assertNotNull(item);
+        assertEquals(1, item.getSoldQty());
+        assertEquals(1, item.getVersion());
     }
 
     private static ConcurrentResult runTwoConcurrentSales(
@@ -219,8 +146,8 @@ public class LockMechanismJUnitTest {
             }
         };
 
-        new Thread(task, "lock-test-1").start();
-        new Thread(task, "lock-test-2").start();
+        new Thread(task, "synch-lock-test-1").start();
+        new Thread(task, "synch-lock-test-2").start();
 
         ready.await();
         start.countDown();
@@ -259,18 +186,7 @@ public class LockMechanismJUnitTest {
         return repository;
     }
 
-    private static void assertFlashItemState(
-            FlashSaleItemRepository repository,
-            int expectedSoldQty,
-            int expectedVersion
-    ) {
 
-        FlashSaleItem item = repository.findById("FI_LOCK");
-
-        assertNotNull(item);
-        assertEquals(expectedSoldQty, item.getSoldQty());
-        assertEquals(expectedVersion, item.getVersion());
-    }
 
     private static void resetFile(String filePath) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {

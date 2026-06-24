@@ -1,108 +1,218 @@
 package controller;
 
-import  model.Enum.SaleStatus;
-import  model.Entity.FlashSaleEvent;
-import  model.Entity.FlashSaleItem;
-import  model.Entity.Product;
-import  repository.FlashSaleRepository;
-import  repository.FlashSaleItemRepository;
-import  repository.ProductRepository;
-
 import java.time.LocalDateTime;
-import java.util.Scanner;
+import java.util.List;
+
+import model.Entity.FlashSaleEvent;
+import model.Entity.FlashSaleItem;
+import model.Entity.Product;
+import model.Enum.SaleStatus;
+import repository.FlashSaleItemRepository;
+import repository.FlashSaleRepository;
+import repository.ProductRepository;
 
 public class FlashSaleController {
 
     private final FlashSaleRepository flashSaleRepository;
     private final FlashSaleItemRepository flashSaleItemRepository;
     private final ProductRepository productRepository;
-    private final Scanner scanner;
 
-    public FlashSaleController(FlashSaleRepository flashSaleRepository, FlashSaleItemRepository flashSaleItemRepository, ProductRepository productRepository) {
+    public FlashSaleController(FlashSaleRepository flashSaleRepository,
+                               FlashSaleItemRepository flashSaleItemRepository,
+                               ProductRepository productRepository) {
         this.flashSaleRepository = flashSaleRepository;
         this.flashSaleItemRepository = flashSaleItemRepository;
         this.productRepository = productRepository;
-        this.scanner = new Scanner(System.in);
     }
 
-    // Chuc nang 3: Tao event moi
-    public void createEvent() {
-        System.out.println("\n--- TIEN HANH TAO SU KIEN FLASH SALE MOI ---");
-        System.out.print("Nhap ID Event (vi du: E99): ");
-        String id = scanner.nextLine().trim();
+    // ==================================
+    // Read
+    // ==================================
 
-        System.out.print("Nhap ten su kien (vi du: Sale Giua Dem): ");
-        String name = scanner.nextLine().trim();
+    public List<FlashSaleEvent> getAllEvents() {
+        return flashSaleRepository.findAll();
+    }
 
-        LocalDateTime start = LocalDateTime.now();
+    public FlashSaleEvent getEventById(String eventId) {
+        return flashSaleRepository.findById(eventId);
+    }
+
+    public FlashSaleItem getFlashItemById(String flashItemId) {
+        return flashSaleItemRepository.findById(flashItemId);
+    }
+
+    public List<FlashSaleItem> getFlashItemsByEventId(String eventId) {
+        List<FlashSaleItem> result = new java.util.ArrayList<>();
+        for (FlashSaleItem item : flashSaleItemRepository.findAll()) {
+            if (item.getEventId().equals(eventId)) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
+    /** Returns only sale items and products that customers can currently buy. */
+    public List<FlashSaleItem> getActiveFlashItemsByEventId(String eventId) {
+        List<FlashSaleItem> result = new java.util.ArrayList<FlashSaleItem>();
+        for (FlashSaleItem item : getFlashItemsByEventId(eventId)) {
+            Product product = productRepository.findById(item.getProductId());
+            if (item.getStatus() == SaleStatus.ACTIVE
+                    && product != null && product.getStatus() == SaleStatus.ACTIVE
+                    && item.getLimitedQty() > item.getSoldQty()) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
+    // ==================================
+    // Create Event
+    // ==================================
+
+    public boolean createEvent(String name) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime start = now;
         LocalDateTime end = start.plusHours(2);
 
-        FlashSaleEvent newEvent = new FlashSaleEvent(id, LocalDateTime.now(), LocalDateTime.now(),name, start, end, SaleStatus.ACTIVE);
-        flashSaleRepository.save(newEvent);
-        System.out.println("[Thong bao]: Tao su kien Flash Sale moi thanh cong!");
+        FlashSaleEvent event = new FlashSaleEvent(flashSaleRepository.generateNextId(), now, now, name, start, end, SaleStatus.UPCOMING);
+        flashSaleRepository.save(event);
+        return true;
     }
 
-    // Chuc nang 4: Dua san pham vao event kem kiem tra validation
-    public void addProductToEvent() {
-        System.out.println("\n--- TIEN HANH THEM SAN PHAM VAO FLASH SALE ---");
-        System.out.print("Nhap ID Event: ");
-        String eventId = scanner.nextLine().trim();
+    public boolean createEvent(String ignoredId, String name) {
+        return createEvent(name);
+    }
 
-        // 1. Kiem tra su kien ton tai
-        boolean eventExists = false;
-        for (FlashSaleEvent e : flashSaleRepository.findAll()) {
-            if (e.getId().equalsIgnoreCase(eventId)) {
-                eventExists = true;
-                break;
-            }
+    // ==================================
+    // Update Event
+    // ==================================
+
+    public boolean updateEventStatus(String eventId, SaleStatus status) {
+        FlashSaleEvent event = flashSaleRepository.findById(eventId);
+
+        if (event == null) {
+            return false;
         }
 
-        if (!eventExists) {
-            System.out.println("[Loi]: Su kien Flash Sale nay khong ton tai!");
-            return;
+        event.setStatus(status);
+        event.setUpdatedAt(LocalDateTime.now());
+        return flashSaleRepository.update(event);
+    }
+
+    public boolean updateEventName(String eventId, String newName) {
+        FlashSaleEvent event = flashSaleRepository.findById(eventId);
+
+        if (event == null) {
+            return false;
         }
 
-        System.out.print("Nhap ID San pham muon dua vao sale: ");
-        String productId = scanner.nextLine().trim();
+        event.setEventName(newName);
+        event.setUpdatedAt(LocalDateTime.now());
+        return flashSaleRepository.update(event);
+    }
 
-        // 2. Kiem tra san pham goc ton tai và phải đang ở trạng thái ACTIVE (Yêu cầu nghiệp vụ hệ thống)
-        Product product = null;
-        for (Product p : productRepository.findAll()) {
-            if (p.getId().equalsIgnoreCase(productId)) {
-                // Kiểm tra xem sản phẩm có bị xóa mềm (DELETED) hoặc ngưng hoạt động (INACTIVE) chưa
-                if (p.getStatus() == SaleStatus.ACTIVE) {
-                    product = p;
-                }
-                break;
-            }
+    public boolean updateEvent(String eventId, String name, SaleStatus status,
+                               LocalDateTime startTime, LocalDateTime endTime) {
+        FlashSaleEvent event = flashSaleRepository.findById(eventId);
+        if (event == null || endTime.isBefore(startTime)) {
+            return false;
+        }
+        event.setEventName(name);
+        event.setStatus(status);
+        event.setStartTime(startTime);
+        event.setEndTime(endTime);
+        event.setUpdatedAt(LocalDateTime.now());
+        return flashSaleRepository.update(event);
+    }
+
+    // ==================================
+    // Assign Product to Event
+    // ==================================
+
+    /**
+     * Validates business rules and creates a FlashSaleItem linking product to event.
+     *
+     * @return the created FlashSaleItem, or null if validation fails (check errorCode).
+     */
+    public FlashSaleItem assignProductToEvent(String eventId,
+                                              String productId,
+                                              double flashPrice,
+                                              int limitedQty) {
+
+        FlashSaleEvent event = flashSaleRepository.findById(eventId);
+        if (event == null) {
+            return null; // event not found
         }
 
+        Product product = productRepository.findById(productId);
         if (product == null) {
-            System.out.println("[Loi]: San pham nay khong ton tai hoac da bi xoa khoi kho goc!");
-            return;
+            return null; // product not found
         }
 
-        System.out.print("Nhap gia Flash Sale: ");
-        double flashPrice = Double.parseDouble(scanner.nextLine());
-
-        System.out.print("Nhap so luong gioi han mo ban trong Flash Sale: ");
-        int limitedQty = Integer.parseInt(scanner.nextLine());
-
-        // 3. Quy tac nghiep vu: So luong mo ban <= So luong kho goc
         if (limitedQty > product.getStockQty()) {
-            System.out.println("[Loi]: So luong mo ban Flash Sale khong duoc lon hon ton kho goc (" + product.getStockQty() + ")!");
-            return;
+            // caller must check: limitedQty > product.getStockQty() beforehand
+            return null;
         }
 
-        String itemId = "ITEM" + (System.currentTimeMillis() % 10000);
+        double discountPercent = Math.round(
+                (1.0 - flashPrice / product.getOriginalPrice()) * 10000.0) / 100.0;
 
-        // Tính discountPercent từ giá gốc và giá flash sale
-        double discountPercent = Math.round((1.0 - flashPrice / product.getOriginalPrice()) * 100.0 * 100.0) / 100.0;
+        LocalDateTime now = LocalDateTime.now();
+        String itemId = flashSaleItemRepository.generateNextId();
 
-        FlashSaleItem item = new FlashSaleItem(itemId, LocalDateTime.now(), LocalDateTime.now(), eventId, productId, flashPrice, limitedQty, 0, discountPercent, 1, SaleStatus.ACTIVE);
+        FlashSaleItem item = new FlashSaleItem(
+                itemId, now, now,
+                eventId, productId,
+                flashPrice, limitedQty, 0,
+                discountPercent, 1,
+                SaleStatus.ACTIVE
+        );
 
-        flashSaleItemRepository.update(item);
-        System.out.println("[Thong bao]: Dua san pham vao Flash Sale thanh cong!");
+        flashSaleItemRepository.save(item);
+        return item;
     }
 
+    /**
+     * Validates that limitedQty does not exceed product stock.
+     * Returns the product if valid, null if product not found or qty exceeds stock.
+     */
+    public Product validateAssignProduct(String productId, int limitedQty) {
+        Product product = productRepository.findById(productId);
+        if (product == null) {
+            return null;
+        }
+        if (limitedQty > product.getStockQty()) {
+            return null;
+        }
+        return product;
+    }
+
+    public Product getProductById(String productId) {
+        return productRepository.findById(productId);
+    }
+
+    public boolean updateFlashItem(String eventId, String productId, String sellerId,
+                                   double discountPercent, int limitedQty) {
+        if (discountPercent < 0 || discountPercent >= 100 || limitedQty <= 0) {
+            return false;
+        }
+        Product product = productRepository.findById(productId);
+        if (product == null || !sellerId.equalsIgnoreCase(product.getSellerId())
+                || limitedQty > product.getStockQty()) {
+            return false;
+        }
+        for (FlashSaleItem item : flashSaleItemRepository.findAll()) {
+            if (eventId.equals(item.getEventId()) && productId.equals(item.getProductId())) {
+                if (limitedQty < item.getSoldQty()) {
+                    return false;
+                }
+                item.setDiscountPercent(discountPercent);
+                item.setFlashPrice(product.getOriginalPrice() * (100.0 - discountPercent) / 100.0);
+                item.setLimitedQty(limitedQty);
+                item.setUpdatedAt(LocalDateTime.now());
+                return flashSaleItemRepository.update(item);
+            }
+        }
+        return false;
+    }
 }

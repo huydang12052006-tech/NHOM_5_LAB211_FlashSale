@@ -11,7 +11,6 @@ public class PaymentRepository extends CsvRepository<Payment> {
     public PaymentRepository(String filePath) {
         super(filePath);
     }
-    // --- Quản lý Event ---
 
     @Override
     protected Payment mapFromCsv(String csvLine) {
@@ -25,7 +24,24 @@ public class PaymentRepository extends CsvRepository<Payment> {
             return null;
         }
     }
+
+    /**
+     * Generates the next payment ID based on the max existing PAYxxxxx.
+     */
+    public String generateNextId() {
+        int maxNumber = 0;
+
+        for (Payment payment : findAll()) {
+            String id = payment.getId();
+            if (id != null && id.matches("PAY\\d+")) {
+                maxNumber = Math.max(maxNumber, Integer.parseInt(id.substring(3)));
+            }
+        }
+
+        return String.format("PAY%05d", maxNumber + 1);
+    }
 }
+
     
 
     

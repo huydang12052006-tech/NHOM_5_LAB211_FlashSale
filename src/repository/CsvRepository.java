@@ -193,12 +193,19 @@ public abstract class CsvRepository<T extends BaseEntity> {
 
     protected void rewriteFile(List<T> entities) {
 
+        String header = readExistingHeader();
+
         try (BufferedWriter writer =
                      new BufferedWriter(
                              new FileWriter(
                                      filePath,
                                      false
                              ))) {
+
+            if (header != null) {
+                writer.write(header);
+                writer.newLine();
+            }
 
             for (T entity : entities) {
 
@@ -213,6 +220,15 @@ public abstract class CsvRepository<T extends BaseEntity> {
             System.out.println(
                 "[ERROR] " + e.getMessage()
             );
+        }
+    }
+
+    private String readExistingHeader() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String firstLine = reader.readLine();
+            return firstLine != null && firstLine.startsWith("id,") ? firstLine : null;
+        } catch (IOException e) {
+            return null;
         }
     }
 }

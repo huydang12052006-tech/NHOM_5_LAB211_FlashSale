@@ -18,6 +18,7 @@ import model.Entity.Order;
 import model.Entity.OrderDetail;
 import model.Entity.Payment;
 import model.Entity.Product;
+import model.Entity.User;
 import model.Enum.LockMechanism;
 import model.Enum.OrderStatus;
 import model.Enum.PaymentMethod;
@@ -28,6 +29,7 @@ import repository.OrderRepository;
 import repository.OrderDetailRepository;
 import repository.PaymentRepository;
 import repository.ProductRepository;
+import repository.UserRepository;
 
 public class OrderController {
 
@@ -37,6 +39,7 @@ public class OrderController {
     private final OrderDetailRepository orderDetailRepository;
     private final PaymentRepository paymentRepository;
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
 
     public OrderController() {
         this.flashSaleItemRepository = new FlashSaleItemRepository();
@@ -45,6 +48,7 @@ public class OrderController {
         this.orderDetailRepository = new OrderDetailRepository();
         this.paymentRepository = new PaymentRepository();
         this.productRepository = new ProductRepository();
+        this.userRepository = new UserRepository();
     }
 
     /*
@@ -417,6 +421,30 @@ public class OrderController {
             productNames.put(detail.getId(), product == null ? "Unknown product" : product.getName());
         }
         return productNames;
+    }
+
+    public Map<String, String> getSellerNamesByOrderDetails(List<OrderDetail> details) {
+        Map<String, String> sellerNames = new LinkedHashMap<String, String>();
+        if (details == null) {
+            return sellerNames;
+        }
+        for (OrderDetail detail : details) {
+            Product product = findDetailProduct(detail);
+            User seller = product == null ? null : userRepository.findById(product.getSellerId());
+            sellerNames.put(detail.getId(), seller == null ? "Unknown seller" : seller.getUsername());
+        }
+        return sellerNames;
+    }
+
+    private Product findDetailProduct(OrderDetail detail) {
+        if (detail.getProductId() != null) {
+            return productRepository.findById(detail.getProductId());
+        }
+        if (detail.getFlashItemId() != null) {
+            FlashSaleItem item = flashSaleItemRepository.findById(detail.getFlashItemId());
+            return item == null ? null : productRepository.findById(item.getProductId());
+        }
+        return null;
     }
 
     public List<Order> getOrdersForSeller(String sellerId) {

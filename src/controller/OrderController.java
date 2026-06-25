@@ -22,6 +22,7 @@ import model.Entity.User;
 import model.Enum.LockMechanism;
 import model.Enum.OrderStatus;
 import model.Enum.PaymentMethod;
+import model.Enum.CustomerTier;
 
 import repository.CustomerRepository;
 import repository.FlashSaleItemRepository;
@@ -335,7 +336,7 @@ public class OrderController {
                     sellerItems = new LinkedHashMap<String, Integer>();
                     flashItemsBySeller.put(sellerId, sellerItems);
                 }
-                sellerItems.put(item.getId(), sellerItems.getOrDefault(item.getId(), 0) + cartItem.getQuantity());
+                sellerItems.put(item.getId(), cartItem.getQuantity());
             } else if (cartItem.getProductId() != null) {
                 Product product = productRepository.findById(cartItem.getProductId());
                 String sellerId = getSellerId(product);
@@ -460,39 +461,64 @@ public class OrderController {
     }
 
     private Product findDetailProduct(OrderDetail detail) {
-        if (detail.getProductId() != null) {
-            return productRepository.findById(detail.getProductId());
-        }
-        if (detail.getFlashItemId() != null) {
-            FlashSaleItem item = flashSaleItemRepository.findById(detail.getFlashItemId());
-            return item == null ? null : productRepository.findById(item.getProductId());
-        }
-        return null;
+        return findDetailProduct(detail, productMap(productRepository.findAll()),
+                flashItemMap(flashSaleItemRepository.findAll()));
     }
 
     public List<Order> getOrdersForSeller(String sellerId) {
         List<Order> result = new ArrayList<Order>();
-        ProductRepository productRepository = new ProductRepository();
-        OrderDetailRepository detailRepository = new OrderDetailRepository();
+        Map<String, List<OrderDetail>> detailsByOrder = detailsByOrderId(orderDetailRepository.findAll());
+        Map<String, Product> productsById = productMap(productRepository.findAll());
+        Map<String, FlashSaleItem> flashItemsById = flashItemMap(flashSaleItemRepository.findAll());
+
         for (Order order : orderRepository.findAll()) {
-            for (OrderDetail detail : detailRepository.findAll()) {
-                if (!order.getId().equals(detail.getOrderId())) {
-                    continue;
-                }
-                Product product = null;
-                if (detail.getProductId() != null) {
-                    product = productRepository.findById(detail.getProductId());
-                } else if (detail.getFlashItemId() != null) {
-                    FlashSaleItem item = flashSaleItemRepository.findById(detail.getFlashItemId());
-                    product = item == null ? null : productRepository.findById(item.getProductId());
-                }
-                if (product != null && sellerId.equalsIgnoreCase(product.getSellerId())) {
+            List<OrderDetail> details = detailsByOrder.get(order.getId());
+            if (details == null) {
+                continue;
+            }
+            for (OrderDetail detail : details) {
+                if (detailBelongsToSeller(detail, sellerId, productsById, flashItemsById)) {
                     result.add(order);
                     break;
                 }
             }
         }
         return result;
+    }
+
+    public Map<String, String> getSellerOrderProductSummaryByOrder(String sellerId, List<Order> orders) {
+        Map<String, String> summaryByOrder = new LinkedHashMap<String, String>();
+        if (orders == null || orders.isEmpty()) {
+            return summaryByOrder;
+        }
+
+        java.util.Set<String> orderIds = new java.util.HashSet<String>();
+        for (Order order : orders) {
+            orderIds.add(order.getId());
+        }
+
+        Map<String, List<OrderDetail>> detailsByOrder = detailsByOrderId(orderDetailRepository.findAll());
+        Map<String, Product> productsById = productMap(productRepository.findAll());
+        Map<String, FlashSaleItem> flashItemsById = flashItemMap(flashSaleItemRepository.findAll());
+
+        for (String orderId : orderIds) {
+            List<OrderDetail> details = detailsByOrder.get(orderId);
+            if (details == null) {
+                summaryByOrder.put(orderId, "");
+                continue;
+            }
+            List<String> parts = new ArrayList<String>();
+            for (OrderDetail detail : details) {
+                if (!detailBelongsToSeller(detail, sellerId, productsById, flashItemsById)) {
+                    continue;
+                }
+                Product product = findDetailProduct(detail, productsById, flashItemsById);
+                String productName = product == null ? "Unknown product" : product.getName();
+                parts.add(productName + " x" + detail.getQuantity());
+            }
+            summaryByOrder.put(orderId, String.join("; ", parts));
+        }
+        return summaryByOrder;
     }
 
     public List<Order> getPendingOrdersForSeller(String sellerId) {
@@ -506,23 +532,83 @@ public class OrderController {
     }
 
     public boolean confirmOrderForSeller(String orderId, String sellerId) {
-        for (Order order : getPendingOrdersForSeller(sellerId)) {
-            if (order.getId().equals(orderId)) {
-                return confirmOrder(orderId);
+        Order order = orderRepository.findById(orderId);
+        if (order == null || order.getStatus() != OrderStatus.PENDING
+                || !orderBelongsToSeller(orderId, sellerId)) {
+            return false;
+        }
+        return markOrderSuccessAndUpdateCustomerSpent(order);
+    }
+
+    public boolean cancelOrderForSeller(String orderId, String sellerId) {
+        Order order = orderRepository.findById(orderId);
+        if (order == null || order.getStatus() != OrderStatus.PENDING
+                || !orderBelongsToSeller(orderId, sellerId)) {
+            return false;
+        }
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setUpdatedAt(LocalDateTime.now());
+        return orderRepository.update(order);
+    }
+
+    private boolean orderBelongsToSeller(String orderId, String sellerId) {
+        Map<String, Product> productsById = productMap(productRepository.findAll());
+        Map<String, FlashSaleItem> flashItemsById = flashItemMap(flashSaleItemRepository.findAll());
+        for (OrderDetail detail : orderDetailRepository.findAll()) {
+            if (orderId != null && orderId.equalsIgnoreCase(detail.getOrderId())
+                    && detailBelongsToSeller(detail, sellerId, productsById, flashItemsById)) {
+                return true;
             }
         }
         return false;
     }
 
-    public boolean cancelOrderForSeller(String orderId, String sellerId) {
-        for (Order order : getPendingOrdersForSeller(sellerId)) {
-            if (order.getId().equals(orderId)) {
-                order.setStatus(OrderStatus.CANCELLED);
-                order.setUpdatedAt(LocalDateTime.now());
-                return orderRepository.update(order);
-            }
+    private boolean detailBelongsToSeller(OrderDetail detail, String sellerId,
+                                          Map<String, Product> productsById,
+                                          Map<String, FlashSaleItem> flashItemsById) {
+        Product product = findDetailProduct(detail, productsById, flashItemsById);
+        return product != null && sellerId != null && sellerId.equalsIgnoreCase(product.getSellerId());
+    }
+
+    private Product findDetailProduct(OrderDetail detail, Map<String, Product> productsById,
+                                      Map<String, FlashSaleItem> flashItemsById) {
+        if (detail.getProductId() != null) {
+            return productsById.get(detail.getProductId());
         }
-        return false;
+        if (detail.getFlashItemId() != null) {
+            FlashSaleItem item = flashItemsById.get(detail.getFlashItemId());
+            return item == null ? null : productsById.get(item.getProductId());
+        }
+        return null;
+    }
+
+    private Map<String, List<OrderDetail>> detailsByOrderId(List<OrderDetail> details) {
+        Map<String, List<OrderDetail>> detailsByOrder = new LinkedHashMap<String, List<OrderDetail>>();
+        for (OrderDetail detail : details) {
+            List<OrderDetail> orderDetails = detailsByOrder.get(detail.getOrderId());
+            if (orderDetails == null) {
+                orderDetails = new ArrayList<OrderDetail>();
+                detailsByOrder.put(detail.getOrderId(), orderDetails);
+            }
+            orderDetails.add(detail);
+        }
+        return detailsByOrder;
+    }
+
+    private Map<String, Product> productMap(List<Product> products) {
+        Map<String, Product> productsById = new LinkedHashMap<String, Product>();
+        for (Product product : products) {
+            productsById.put(product.getId(), product);
+        }
+        return productsById;
+    }
+
+    private Map<String, FlashSaleItem> flashItemMap(List<FlashSaleItem> flashItems) {
+        Map<String, FlashSaleItem> flashItemsById = new LinkedHashMap<String, FlashSaleItem>();
+        for (FlashSaleItem item : flashItems) {
+            flashItemsById.put(item.getId(), item);
+        }
+        return flashItemsById;
     }
 
     public boolean confirmOrder(String orderId) {
@@ -530,9 +616,38 @@ public class OrderController {
         if (order == null || order.getStatus() != OrderStatus.PENDING) {
             return false;
         }
+        return markOrderSuccessAndUpdateCustomerSpent(order);
+    }
+
+    private boolean markOrderSuccessAndUpdateCustomerSpent(Order order) {
+        Customer customer = customerRepository.findById(order.getCustomerId());
+        if (customer == null) {
+            return false;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
         order.setStatus(OrderStatus.SUCCESS);
-        order.setUpdatedAt(LocalDateTime.now());
-        return orderRepository.update(order);
+        order.setUpdatedAt(now);
+
+        if (!orderRepository.update(order)) {
+            return false;
+        }
+
+        double newTotalSpent = customer.getTotalSpent() + order.getTotalAmount();
+        customer.setTotalSpent(newTotalSpent);
+        customer.setTier(resolveCustomerTier(newTotalSpent));
+        customer.setUpdatedAt(now);
+        return customerRepository.update(customer);
+    }
+
+    private CustomerTier resolveCustomerTier(double totalSpent) {
+        if (totalSpent >= 50000000) {
+            return CustomerTier.PREMIUM;
+        }
+        if (totalSpent >= 10000000) {
+            return CustomerTier.VIP;
+        }
+        return CustomerTier.NORMAL;
     }
 
     public boolean createPayment(String orderId, PaymentMethod method) {

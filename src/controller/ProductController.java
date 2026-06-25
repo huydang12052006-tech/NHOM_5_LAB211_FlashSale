@@ -4,6 +4,10 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 import model.Entity.Product;
 import model.Entity.User;
@@ -25,8 +29,9 @@ public class ProductController {
     // ==================================
     public List<Product> getAllProducts() {
         List<Product> result = new ArrayList<Product>();
+        Set<String> activeSellerIds = activeUserIds();
         for (Product product : productRepository.findAll()) {
-            if (isVisibleForCustomers(product)) {
+            if (isVisibleForCustomers(product, activeSellerIds)) {
                 result.add(product);
             }
         }
@@ -40,12 +45,24 @@ public class ProductController {
 
     public List<Product> searchProducts(String keyword) {
         List<Product> result = new ArrayList<Product>();
+        Set<String> activeSellerIds = activeUserIds();
         for (Product product : productRepository.searchByKeyword(keyword)) {
-            if (isVisibleForCustomers(product)) {
+            if (isVisibleForCustomers(product, activeSellerIds)) {
                 result.add(product);
             }
         }
         return result;
+    }
+
+    public Map<String, Product> getVisibleProductMap() {
+        Map<String, Product> productsById = new LinkedHashMap<String, Product>();
+        Set<String> activeSellerIds = activeUserIds();
+        for (Product product : productRepository.findAll()) {
+            if (isVisibleForCustomers(product, activeSellerIds)) {
+                productsById.put(product.getId(), product);
+            }
+        }
+        return productsById;
     }
 
     public List<Product> getProductsBySellerId(String sellerId) {
@@ -63,11 +80,24 @@ public class ProductController {
     }
 
     public boolean isVisibleForCustomers(Product product) {
+        return isVisibleForCustomers(product, activeUserIds());
+    }
+
+    private boolean isVisibleForCustomers(Product product, Set<String> activeSellerIds) {
         if (product == null || product.getStatus() != model.Enum.SaleStatus.ACTIVE) {
             return false;
         }
-        User seller = userRepository.findById(product.getSellerId());
-        return seller != null && seller.isActive();
+        return activeSellerIds.contains(product.getSellerId());
+    }
+
+    private Set<String> activeUserIds() {
+        Set<String> activeUserIds = new HashSet<String>();
+        for (User user : userRepository.findAll()) {
+            if (user.isActive()) {
+                activeUserIds.add(user.getId());
+            }
+        }
+        return activeUserIds;
     }
 
     // ==================================

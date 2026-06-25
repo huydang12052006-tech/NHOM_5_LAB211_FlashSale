@@ -1,6 +1,7 @@
 package view;
 
 import java.util.List;
+import java.util.Map;
 import java.time.LocalDateTime;
 import java.util.Scanner;
 
@@ -118,8 +119,9 @@ public class FlashSaleView {
         System.out.printf("| %-12s | %-35s | %-12s | %-12s | %-11s | %-13s |\n", 
                 "Flash Item ID", "Product Name", "Orig. Price", "Flash Price", "Discount %", "Remaining Qty");
         System.out.println("---------------------------------------------------------------------------------------------------------------");
+        Map<String, model.Entity.Product> productsById = pc.getVisibleProductMap();
         for (FlashSaleItem item : items) {
-            model.Entity.Product product = pc.getProductById(item.getProductId());
+            model.Entity.Product product = productsById.get(item.getProductId());
             String prodName = (product != null) ? product.getName() : "Unknown Product";
             double origPrice = (product != null) ? product.getOriginalPrice() : 0.0;
             int remaining = item.getLimitedQty() - item.getSoldQty();

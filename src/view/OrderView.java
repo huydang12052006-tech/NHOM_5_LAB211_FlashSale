@@ -103,6 +103,30 @@ public class OrderView {
         System.out.println("=========================");
     }
 
+    public void displaySellerOrderReview(List<Order> orders, Map<String, String> productSummaryByOrder) {
+        System.out.println("\n===== CUSTOMER ORDERS TO REVIEW =====");
+
+        if (orders == null || orders.isEmpty()) {
+            System.out.println("No orders found.");
+            return;
+        }
+
+        System.out.println("-------------------------------------------------------------------------------------------------------------------------");
+        System.out.printf("| %-10s | %-19s | %-14s | %-12s | %-50s |%n",
+                "Order ID", "Created at", "Total (VND)", "Status", "Your items");
+        System.out.println("-------------------------------------------------------------------------------------------------------------------------");
+        for (Order order : orders) {
+            String summary = productSummaryByOrder == null ? "" : productSummaryByOrder.get(order.getId());
+            if (summary == null || summary.trim().isEmpty()) {
+                summary = "No item summary";
+            }
+            System.out.printf("| %-10s | %-19s | %-14.0f | %-12s | %-50s |%n",
+                    order.getId(), order.getCreatedAt(), order.getTotalAmount(),
+                    order.getStatus(), fit(summary, 50));
+        }
+        System.out.println("-------------------------------------------------------------------------------------------------------------------------");
+    }
+
     public void displayBuyerOrderHistory(List<Order> orders) {
         displayBuyerOrderHistory(orders, java.util.Collections.<String, String>emptyMap());
     }

@@ -2,6 +2,10 @@ package controller;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 import model.Entity.FlashSaleEvent;
 import model.Entity.FlashSaleItem;
@@ -58,11 +62,13 @@ public class FlashSaleController {
     /** Returns only sale items and products that customers can currently buy. */
     public List<FlashSaleItem> getActiveFlashItemsByEventId(String eventId) {
         List<FlashSaleItem> result = new java.util.ArrayList<FlashSaleItem>();
+        Map<String, Product> productsById = productMap(productRepository.findAll());
+        Set<String> activeSellerIds = activeUserIds();
         for (FlashSaleItem item : getFlashItemsByEventId(eventId)) {
-            Product product = productRepository.findById(item.getProductId());
+            Product product = productsById.get(item.getProductId());
             if (item.getStatus() == SaleStatus.ACTIVE
                     && product != null && product.getStatus() == SaleStatus.ACTIVE
-                    && isSellerActive(product)
+                    && isSellerActive(product, activeSellerIds)
                     && item.getLimitedQty() > item.getSoldQty()) {
                 result.add(item);
             }
@@ -198,11 +204,32 @@ public class FlashSaleController {
     }
 
     private boolean isSellerActive(Product product) {
+        return isSellerActive(product, activeUserIds());
+    }
+
+    private boolean isSellerActive(Product product, Set<String> activeSellerIds) {
         if (product == null || product.getSellerId() == null) {
             return false;
         }
-        User seller = userRepository.findById(product.getSellerId());
-        return seller != null && seller.isActive();
+        return activeSellerIds.contains(product.getSellerId());
+    }
+
+    private Set<String> activeUserIds() {
+        Set<String> activeUserIds = new HashSet<String>();
+        for (User user : userRepository.findAll()) {
+            if (user.isActive()) {
+                activeUserIds.add(user.getId());
+            }
+        }
+        return activeUserIds;
+    }
+
+    private Map<String, Product> productMap(List<Product> products) {
+        Map<String, Product> productsById = new LinkedHashMap<String, Product>();
+        for (Product product : products) {
+            productsById.put(product.getId(), product);
+        }
+        return productsById;
     }
 
     public boolean updateFlashItem(String eventId, String productId, String sellerId,

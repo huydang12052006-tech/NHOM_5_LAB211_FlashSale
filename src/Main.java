@@ -355,11 +355,7 @@ public class Main {
 
         if (authController.getCurrentUser() != null
                 && authController.getCurrentUser().getRole() == UserRole.CUSTOMER) {
-            System.out.println("\nWould you like to place an order? (y/n): ");
-            String choice = scanner.nextLine().trim().toLowerCase();
-            if ("y".equals(choice) || "yes".equals(choice)) {
-                cartController.addFlashSaleItemsToCart(authController.getCurrentUser(), eventId, selectedLockMechanism);
-            }
+            orderFlashSaleFromEvent(eventId, eventItems);
         }
     }
 
@@ -422,13 +418,18 @@ public class Main {
         int orderType = orderView.inputOrderType();
 
         if (orderType == 2) {
-            cartController.addRegularProductsToCart(authController.getCurrentUser(), selectedLockMechanism);
+            orderRegularProduct();
         } else {
-            cartController.addFlashSaleItemsToCart(authController.getCurrentUser(), null, selectedLockMechanism);
+            shopeeCheckout();
         }
     }
 
     private void orderRegularProduct() {
+        List<Product> allProducts = productController.getAllProducts();
+        orderRegularProductFromProducts(allProducts, true);
+    }
+
+    private void orderRegularProductFromProducts(List<Product> selectableProducts, boolean showProducts) {
         try {
             User currentUser = authController.getCurrentUser();
             if (currentUser == null) {
@@ -444,24 +445,29 @@ public class Main {
 
             System.out.println("\n===== ORDER REGULAR PRODUCT =====");
 
-            List<Product> allProducts = productController.getAllProducts();
-            if (allProducts.isEmpty()) {
+            if (selectableProducts == null || selectableProducts.isEmpty()) {
                 System.out.println("No products available.");
                 return;
             }
 
-            productView.displayProducts(allProducts);
+            if (showProducts) {
+                productView.displayProducts(selectableProducts);
+            }
 
             String productId = orderView.inputProductId();
             Product product = productController.getProductById(productId);
 
-            if (product == null) {
-                System.out.println("[ERROR] Product not found");
+            if (product == null || !containsProduct(selectableProducts, productId)) {
+                System.out.println("[ERROR] Product not found in this list");
                 return;
             }
 
             int quantity = orderView.inputQuantity();
 
+            if (quantity <= 0) {
+                System.out.println("[ERROR] Quantity must be greater than 0");
+                return;
+            }
             if (quantity > product.getStockQty()) {
                 System.out.println("[ERROR] Insufficient stock. Available: " + product.getStockQty());
                 return;
@@ -513,11 +519,19 @@ public class Main {
         if (currentUser == null || currentUser.getRole() != UserRole.CUSTOMER || products.isEmpty()) {
             return;
         }
-        System.out.print("Add products from this list to cart or pay now? (y/n): ");
-        String choice = scanner.nextLine().trim().toLowerCase();
-        if ("y".equals(choice) || "yes".equals(choice)) {
-            cartController.addRegularProductsToCart(currentUser, products, selectedLockMechanism);
+        orderRegularProductFromProducts(products, false);
+    }
+
+    private boolean containsProduct(List<Product> products, String productId) {
+        if (products == null || productId == null) {
+            return false;
         }
+        for (Product product : products) {
+            if (productId.equalsIgnoreCase(product.getId())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void checkOrderStatus() {
@@ -816,19 +830,22 @@ public class Main {
     }
 
     private void confirmSellerOrder() {
-        List<Order> orders = orderController.getOrdersForSeller(authController.getCurrentUser().getId());
-        orderView.displayOrderHistory(orders);
+        String sellerId = authController.getCurrentUser().getId();
+        List<Order> orders = orderController.getOrdersForSeller(sellerId);
+        orderView.displaySellerOrderReview(orders,
+                orderController.getSellerOrderProductSummaryByOrder(sellerId, orders));
         if (orders.isEmpty()) {
             return;
         }
         String orderId = orderView.inputOrderId();
-        orderView.showConfirmOrderResult(orderController.confirmOrderForSeller(orderId,
-                authController.getCurrentUser().getId()));
+        orderView.showConfirmOrderResult(orderController.confirmOrderForSeller(orderId, sellerId));
     }
 
     private void reviewPendingSellerOrders() {
-        List<Order> orders = orderController.getPendingOrdersForSeller(authController.getCurrentUser().getId());
-        orderView.displayOrderHistory(orders);
+        String sellerId = authController.getCurrentUser().getId();
+        List<Order> orders = orderController.getPendingOrdersForSeller(sellerId);
+        orderView.displaySellerOrderReview(orders,
+                orderController.getSellerOrderProductSummaryByOrder(sellerId, orders));
         if (orders.isEmpty()) {
             return;
         }
@@ -838,9 +855,9 @@ public class Main {
         System.out.print("Choose review action: ");
         String action = scanner.nextLine().trim();
         boolean success = "1".equals(action)
-                ? orderController.confirmOrderForSeller(orderId, authController.getCurrentUser().getId())
+                ? orderController.confirmOrderForSeller(orderId, sellerId)
                 : "2".equals(action)
-                        && orderController.cancelOrderForSeller(orderId, authController.getCurrentUser().getId());
+                        && orderController.cancelOrderForSeller(orderId, sellerId);
         System.out.println(success ? "[SUCCESS] Order review completed."
                 : "[FAILED] Only pending orders of your products can be reviewed.");
     }

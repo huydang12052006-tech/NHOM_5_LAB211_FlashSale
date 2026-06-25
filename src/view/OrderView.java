@@ -2,9 +2,11 @@ package view;
 
 import model.Entity.FlashSaleItem;
 import model.Entity.Order;
+import model.Entity.OrderDetail;
 import model.Enum.PaymentMethod;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 public class OrderView {
@@ -67,14 +69,22 @@ public class OrderView {
     // ==================================
 
     public void displayOrder(Order order) {
+        displayOrder(order, null);
+    }
 
+    public void displayOrder(Order order, String eventName) {
         if (order == null) {
             System.out.println("[INFO] Order not found.");
             return;
         }
 
         System.out.println("========== ORDER ==========");
-        System.out.println(order);
+        System.out.println("Order ID: " + order.getId());
+        System.out.println("Created at: " + order.getCreatedAt());
+        System.out.printf("Total: %.0f VND%n", order.getTotalAmount());
+        System.out.println("Status: " + order.getStatus());
+        System.out.println("Event: " + orderEventName(order, eventName));
+        System.out.println("Processing mode: " + order.getLockMechanism());
         System.out.println("===========================");
     }
 
@@ -94,21 +104,47 @@ public class OrderView {
     }
 
     public void displayBuyerOrderHistory(List<Order> orders) {
+        displayBuyerOrderHistory(orders, java.util.Collections.<String, String>emptyMap());
+    }
+
+    public void displayBuyerOrderHistory(List<Order> orders, Map<String, String> eventNames) {
         System.out.println("\n===== MY ORDERS =====");
         if (orders == null || orders.isEmpty()) {
             System.out.println("No orders found.");
             return;
         }
-        System.out.println("--------------------------------------------------------------------------------");
-        System.out.printf("| %-10s | %-19s | %-14s | %-12s | %-10s |%n",
+        System.out.println("--------------------------------------------------------------------------------------------------");
+        System.out.printf("| %-10s | %-19s | %-14s | %-12s | %-28s |%n",
                 "Order ID", "Created at", "Total (VND)", "Status", "Event");
-        System.out.println("--------------------------------------------------------------------------------");
+        System.out.println("--------------------------------------------------------------------------------------------------");
         for (Order order : orders) {
-            System.out.printf("| %-10s | %-19s | %-14.0f | %-12s | %-10s |%n",
+            System.out.printf("| %-10s | %-19s | %-14.0f | %-12s | %-28s |%n",
                     order.getId(), order.getCreatedAt(), order.getTotalAmount(),
-                    order.getStatus(), order.getEventId());
+                    order.getStatus(), fit(orderEventName(order, eventNames), 28));
         }
-        System.out.println("--------------------------------------------------------------------------------");
+        System.out.println("--------------------------------------------------------------------------------------------------");
+    }
+
+    public void displayOrderDetails(List<OrderDetail> details, Map<String, String> productNames) {
+        System.out.println("\n===== ORDER DETAILS =====");
+        if (details == null || details.isEmpty()) {
+            System.out.println("No order details found.");
+            return;
+        }
+        System.out.println("------------------------------------------------------------------------------------------");
+        System.out.printf("| %-28s | %-8s | %-14s | %-14s |%n",
+                "Product", "Qty", "Unit (VND)", "Subtotal");
+        System.out.println("------------------------------------------------------------------------------------------");
+        for (OrderDetail detail : details) {
+            String productName = productNames == null ? null : productNames.get(detail.getId());
+            if (productName == null || productName.trim().isEmpty()) {
+                productName = "Unknown product";
+            }
+            System.out.printf("| %-28s | %-8d | %-14.0f | %-14.0f |%n",
+                    fit(productName, 28), detail.getQuantity(),
+                    detail.getUnitPrice(), detail.getSubTotal());
+        }
+        System.out.println("------------------------------------------------------------------------------------------");
     }
 
     public void displayInventoryResult(FlashSaleItem item) {
@@ -161,5 +197,30 @@ public class OrderView {
 
     public void showPlaceOrderError(String message) {
         System.out.println("[FAILED] " + message);
+    }
+
+    private String orderEventName(Order order, Map<String, String> eventNames) {
+        if (order.getEventId() == null) {
+            return "Regular Product";
+        }
+        if (eventNames == null) {
+            return order.getEventId();
+        }
+        String eventName = eventNames.get(order.getEventId());
+        return eventName == null || eventName.trim().isEmpty() ? order.getEventId() : eventName;
+    }
+
+    private String orderEventName(Order order, String eventName) {
+        if (order.getEventId() == null) {
+            return "Regular Product";
+        }
+        return eventName == null || eventName.trim().isEmpty() ? order.getEventId() : eventName;
+    }
+
+    private String fit(String value, int maxLength) {
+        if (value == null) {
+            return "";
+        }
+        return value.length() <= maxLength ? value : value.substring(0, maxLength - 3) + "...";
     }
 }

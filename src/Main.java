@@ -6,14 +6,14 @@ import controller.ProductController;
 import controller.SimulatorController;
 import exception.FlashSaleException;
 import java.io.IOException;
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import model.Entity.FlashSaleEvent;
 import model.Entity.FlashSaleItem;
-import model.Entity.CartItem;
 import model.Entity.Order;
+import model.Entity.OrderDetail;
 import model.Entity.OrderTransaction;
 import model.Entity.Product;
 import model.Entity.User;
@@ -55,14 +55,22 @@ public class Main {
         this.userView = new UserView();
         this.simulatorView = new SimulatorView();
 
-        this.authController = new AuthController(new repository.UserRepository(), new view.AuthView(scanner));
-        this.cartController = new CartController();
         this.productController = new ProductController(new repository.ProductRepository());
         this.flashSaleController = new FlashSaleController(
                 new repository.FlashSaleRepository(),
                 new repository.FlashSaleItemRepository(),
                 new repository.ProductRepository());
         this.orderController = new OrderController();
+        this.authController = new AuthController(new repository.UserRepository(), new view.AuthView(scanner));
+        this.cartController = new CartController(
+                new repository.CartRepository(),
+                scanner,
+                orderController,
+                productController,
+                flashSaleController,
+                productView,
+                orderView,
+                flashSaleView);
         this.simulatorController = new SimulatorController();
 
         this.configuredThreadCount = 100;
@@ -120,7 +128,6 @@ public class Main {
             System.out.println("3. Browse Flash Sales");
             System.out.println("4. Browse Products");
             System.out.println("5. Find Products");
-            System.out.println("6. Track an Order");
             System.out.println("0. Back to Home");
             System.out.print("Choose: ");
 
@@ -139,8 +146,6 @@ public class Main {
                 viewProducts();
             } else if ("5".equals(choice)) {
                 searchProducts();
-            } else if ("6".equals(choice)) {
-                checkOrderStatus();
             } else if ("0".equals(choice)) {
                 back = true;
             } else {
@@ -163,7 +168,7 @@ public class Main {
             System.out.println("1. Browse Flash Sales");
             System.out.println("2. Browse Products");
             System.out.println("3. Find Products");
-            System.out.println("4. Add Products");
+            System.out.println("4. Place order");
             System.out.println("5. My Cart");
             System.out.println("6. My Orders");
             System.out.println("0. Sign Out");
@@ -180,7 +185,7 @@ public class Main {
             } else if ("4".equals(choice)) {
                 placeOrder();
             } else if ("5".equals(choice)) {
-                showCart();
+                cartController.showCart(authController.getCurrentUser(), selectedLockMechanism);
             } else if ("6".equals(choice)) {
                 viewMyOrders();
             } else if ("0".equals(choice)) {
@@ -353,7 +358,7 @@ public class Main {
             System.out.println("\nWould you like to place an order? (y/n): ");
             String choice = scanner.nextLine().trim().toLowerCase();
             if ("y".equals(choice) || "yes".equals(choice)) {
-                addFlashSaleItemsToCart(eventId);
+                cartController.addFlashSaleItemsToCart(authController.getCurrentUser(), eventId, selectedLockMechanism);
             }
         }
     }
@@ -417,183 +422,9 @@ public class Main {
         int orderType = orderView.inputOrderType();
 
         if (orderType == 2) {
-            addRegularProductsToCart();
+            cartController.addRegularProductsToCart(authController.getCurrentUser(), selectedLockMechanism);
         } else {
-            addFlashSaleItemsToCart(null);
-        }
-    }
-
-    private void addFlashSaleItemsToCart(String selectedEventId) {
-        try {
-            User currentUser = authController.getCurrentUser();
-            model.Entity.Customer customer = orderController.getCustomerByUserId(currentUser.getId());
-            List<FlashSaleEvent> activeEvents = new java.util.ArrayList<FlashSaleEvent>();
-            for (FlashSaleEvent event : flashSaleController.getAllEvents()) {
-                if (event.getStatus() == SaleStatus.ACTIVE) {
-                    activeEvents.add(event);
-                }
-            }
-            if (activeEvents.isEmpty()) {
-                System.out.println("No active flash-sale event is available.");
-                return;
-            }
-            String eventId = selectedEventId;
-            if (eventId == null) {
-                flashSaleView.displayActiveEvents(activeEvents);
-                eventId = flashSaleView.inputEventId();
-            }
-            FlashSaleEvent selectedEvent = flashSaleController.getEventById(eventId);
-            if (selectedEvent == null || selectedEvent.getStatus() != SaleStatus.ACTIVE) {
-                flashSaleView.showEventNotFound();
-                return;
-            }
-            List<FlashSaleItem> eventItems = flashSaleController.getActiveFlashItemsByEventId(eventId);
-            flashSaleView.displayFlashSaleItemsInTable(eventItems, productController);
-            Map<String, Integer> selectedItems = new LinkedHashMap<String, Integer>();
-            boolean adding = true;
-            while (adding) {
-                String flashItemId = flashSaleView.inputFlashItemId();
-                FlashSaleItem item = flashSaleController.getFlashItemById(flashItemId);
-                if (item == null || !eventId.equals(item.getEventId())
-                        || !containsFlashItem(eventItems, flashItemId)) {
-                    System.out.println("[FAILED] Item is not in the selected event.");
-                } else {
-                    int quantity = orderView.inputQuantity();
-                    selectedItems.put(flashItemId, selectedItems.getOrDefault(flashItemId, 0) + quantity);
-                }
-                System.out.print("Add another product to this order? (y/n): ");
-                String choice = scanner.nextLine().trim().toLowerCase();
-                adding = "y".equals(choice) || "yes".equals(choice);
-            }
-            if (selectedItems.isEmpty()) {
-                System.out.println("No item was selected.");
-                return;
-            }
-            for (Map.Entry<String, Integer> entry : selectedItems.entrySet()) {
-                FlashSaleItem item = flashSaleController.getFlashItemById(entry.getKey());
-                cartController.addItem(customer.getId(), item.getId(), item.getProductId(), entry.getValue());
-            }
-            chooseCartAction(customer.getId());
-        } catch (NumberFormatException e) {
-            orderView.showPlaceOrderError("Quantity, discount, and limit must be numbers.");
-        }
-    }
-
-    private void addRegularProductsToCart() {
-        List<Product> activeProducts = new java.util.ArrayList<Product>();
-        for (Product product : productController.getAllProducts()) {
-            if (product.getStatus() == SaleStatus.ACTIVE) {
-                activeProducts.add(product);
-            }
-        }
-        addRegularProductsToCart(activeProducts);
-    }
-
-    private void addRegularProductsToCart(List<Product> selectableProducts) {
-        try {
-            User currentUser = authController.getCurrentUser();
-            model.Entity.Customer customer = orderController.getCustomerByUserId(currentUser.getId());
-            Map<String, Integer> selectedProducts = new LinkedHashMap<String, Integer>();
-            boolean adding = true;
-            while (adding) {
-                productView.displayProducts(selectableProducts);
-                String productId = orderView.inputProductId();
-                Product product = productController.getProductById(productId);
-                if (product == null || product.getStatus() != SaleStatus.ACTIVE
-                        || !containsProduct(selectableProducts, productId)) {
-                    System.out.println("[FAILED] Product not found or not active.");
-                } else {
-                    int quantity = orderView.inputQuantity();
-                    selectedProducts.put(productId, selectedProducts.getOrDefault(productId, 0) + quantity);
-                }
-                System.out.print("Add another regular product? (y/n): ");
-                String choice = scanner.nextLine().trim().toLowerCase();
-                adding = "y".equals(choice) || "yes".equals(choice);
-            }
-            if (selectedProducts.isEmpty()) {
-                return;
-            }
-            for (Map.Entry<String, Integer> entry : selectedProducts.entrySet()) {
-                cartController.addItem(customer.getId(), null, entry.getKey(), entry.getValue());
-            }
-            chooseCartAction(customer.getId());
-        } catch (NumberFormatException e) {
-            orderView.showPlaceOrderError("Quantity must be a number.");
-        }
-    }
-
-    private void chooseCartAction(String customerId) {
-        System.out.println("1. Add selected products to cart");
-        System.out.println("2. Pay now");
-        System.out.print("Choose: ");
-        String choice = scanner.nextLine().trim();
-        if ("1".equals(choice)) {
-            System.out.println("[SUCCESS] Products were saved in your cart.");
-        } else if ("2".equals(choice)) {
-            checkoutCart(customerId);
-        } else {
-            System.out.println("[INFO] Products were saved in your cart. You can checkout later.");
-        }
-    }
-
-    private void showCart() {
-        model.Entity.Customer customer = orderController.getCustomerByUserId(authController.getCurrentUser().getId());
-        List<CartItem> items = cartController.getCartByCustomer(customer.getId());
-        System.out.println("\n===== MY CART =====");
-        if (items.isEmpty()) {
-            System.out.println("Cart is empty.");
-            return;
-        }
-        double total = 0.0;
-        for (CartItem item : items) {
-            Product product = item.getProductId() == null ? null : productController.getProductById(item.getProductId());
-            String name = product == null ? "Unknown product" : product.getName();
-            double price = 0.0;
-            if (item.getFlashItemId() != null) {
-                FlashSaleItem flashItem = flashSaleController.getFlashItemById(item.getFlashItemId());
-                price = flashItem == null ? 0.0 : flashItem.getFlashPrice();
-            } else if (product != null) {
-                price = product.getOriginalPrice();
-            }
-            total += price * item.getQuantity();
-            System.out.printf("%s | %s | qty=%d | unit=%.0f | subtotal=%.0f%n",
-                    item.getId(), name, item.getQuantity(), price, price * item.getQuantity());
-        }
-        System.out.printf("Cart total: %.0f%n", total);
-        System.out.println("1. Checkout");
-        System.out.println("2. Remove an item");
-        System.out.println("0. Back");
-        System.out.print("Choose: ");
-        String choice = scanner.nextLine().trim();
-        if ("1".equals(choice)) {
-            checkoutCart(customer.getId());
-        } else if ("2".equals(choice)) {
-            System.out.print("Cart item ID: ");
-            String cartItemId = scanner.nextLine().trim();
-            System.out.println(cartController.removeItem(customer.getId(), cartItemId)
-                    ? "[SUCCESS] Item removed from cart." : "[FAILED] Cart item not found.");
-        }
-    }
-
-    private void checkoutCart(String customerId) {
-        try {
-            List<CartItem> items = cartController.getCartByCustomer(customerId);
-            List<String> orderIds = orderController.checkoutCart(customerId, items, selectedLockMechanism);
-            PaymentMethod method = orderView.inputPaymentMethod();
-            boolean paymentsSaved = true;
-            for (String orderId : orderIds) {
-                paymentsSaved = orderController.createPayment(orderId, method) && paymentsSaved;
-            }
-            if (paymentsSaved) {
-                cartController.clearCart(customerId);
-                System.out.println("[SUCCESS] Checkout completed. Pending order(s): " + orderIds);
-            } else {
-                System.out.println("[FAILED] Payment could not be saved. Cart was kept.");
-            }
-        } catch (IOException e) {
-            orderView.showPlaceOrderError("IO error: " + e.getMessage());
-        } catch (FlashSaleException e) {
-            orderView.showPlaceOrderError(e.getMessage());
+            cartController.addFlashSaleItemsToCart(authController.getCurrentUser(), null, selectedLockMechanism);
         }
     }
 
@@ -685,22 +516,18 @@ public class Main {
         System.out.print("Add products from this list to cart or pay now? (y/n): ");
         String choice = scanner.nextLine().trim().toLowerCase();
         if ("y".equals(choice) || "yes".equals(choice)) {
-            addRegularProductsToCart(products);
+            cartController.addRegularProductsToCart(currentUser, products, selectedLockMechanism);
         }
-    }
-
-    private boolean containsProduct(List<Product> products, String productId) {
-        for (Product product : products) {
-            if (product.getId().equals(productId)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void checkOrderStatus() {
-        String orderId = orderView.inputOrderId();
-        orderView.displayOrder(orderController.getOrderById(orderId));
+        System.out.print("Order ID: ");
+        String orderId = scanner.nextLine().trim();
+        Order order = orderController.getOrderById(orderId);
+        orderView.displayOrder(order, getEventName(order));
+        if (order != null) {
+            offerOrderDetailView(order.getCustomerId());
+        }
     }
 
     private void checkInventory() {
@@ -767,7 +594,50 @@ public class Main {
 
     private void viewMyOrders() {
         model.Entity.Customer customer = orderController.getCustomerByUserId(authController.getCurrentUser().getId());
-        orderView.displayBuyerOrderHistory(orderController.getOrdersByCustomer(customer.getId()));
+        List<Order> orders = orderController.getOrdersByCustomer(customer.getId());
+        orderView.displayBuyerOrderHistory(orders, getEventNames(orders));
+        if (!orders.isEmpty()) {
+            offerOrderDetailView(customer.getId());
+        }
+    }
+
+    private void offerOrderDetailView(String customerId) {
+        System.out.print("View order details? (y/n): ");
+        String choice = scanner.nextLine().trim().toLowerCase();
+        if (!"y".equals(choice) && !"yes".equals(choice)) {
+            return;
+        }
+
+        System.out.print("Order ID: ");
+        String orderId = scanner.nextLine().trim();
+        Order order = orderController.getOrderById(orderId);
+        if (order == null || (customerId != null && !customerId.equalsIgnoreCase(order.getCustomerId()))) {
+            orderView.showOrderNotFound();
+            return;
+        }
+
+        List<OrderDetail> details = orderController.getOrderDetailsByOrderId(orderId);
+        orderView.displayOrderDetails(details, orderController.getProductNamesByOrderDetails(details));
+    }
+
+    private Map<String, String> getEventNames(List<Order> orders) {
+        Map<String, String> eventNames = new LinkedHashMap<String, String>();
+        for (Order order : orders) {
+            if (order.getEventId() != null && !eventNames.containsKey(order.getEventId())) {
+                FlashSaleEvent event = flashSaleController.getEventById(order.getEventId());
+                eventNames.put(order.getEventId(),
+                        event == null ? order.getEventId() : event.getEventName());
+            }
+        }
+        return eventNames;
+    }
+
+    private String getEventName(Order order) {
+        if (order == null || order.getEventId() == null) {
+            return null;
+        }
+        FlashSaleEvent event = flashSaleController.getEventById(order.getEventId());
+        return event == null ? order.getEventId() : event.getEventName();
     }
 
     private void addProduct() {
@@ -931,15 +801,6 @@ public class Main {
         String orderId = orderView.inputOrderId();
         orderView.showConfirmOrderResult(orderController.confirmOrderForSeller(orderId,
                 authController.getCurrentUser().getId()));
-    }
-
-    private boolean containsFlashItem(List<FlashSaleItem> items, String flashItemId) {
-        for (FlashSaleItem item : items) {
-            if (item.getId().equals(flashItemId)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void reviewPendingSellerOrders() {

@@ -34,6 +34,7 @@ public class OrderController {
     private final FlashSaleItemRepository flashSaleItemRepository;
     private final CustomerRepository customerRepository;
     private final OrderRepository orderRepository;
+    private final OrderDetailRepository orderDetailRepository;
     private final PaymentRepository paymentRepository;
     private final ProductRepository productRepository;
 
@@ -41,6 +42,7 @@ public class OrderController {
         this.flashSaleItemRepository = new FlashSaleItemRepository();
         this.customerRepository = new CustomerRepository();
         this.orderRepository = new OrderRepository();
+        this.orderDetailRepository = new OrderDetailRepository();
         this.paymentRepository = new PaymentRepository();
         this.productRepository = new ProductRepository();
     }
@@ -387,6 +389,34 @@ public class OrderController {
 
     public Order getOrderById(String orderId) {
         return orderRepository.findById(orderId);
+    }
+
+    public List<OrderDetail> getOrderDetailsByOrderId(String orderId) {
+        List<OrderDetail> result = new ArrayList<OrderDetail>();
+        for (OrderDetail detail : orderDetailRepository.findAll()) {
+            if (orderId != null && orderId.equalsIgnoreCase(detail.getOrderId())) {
+                result.add(detail);
+            }
+        }
+        return result;
+    }
+
+    public Map<String, String> getProductNamesByOrderDetails(List<OrderDetail> details) {
+        Map<String, String> productNames = new LinkedHashMap<String, String>();
+        if (details == null) {
+            return productNames;
+        }
+        for (OrderDetail detail : details) {
+            Product product = null;
+            if (detail.getProductId() != null) {
+                product = productRepository.findById(detail.getProductId());
+            } else if (detail.getFlashItemId() != null) {
+                FlashSaleItem item = flashSaleItemRepository.findById(detail.getFlashItemId());
+                product = item == null ? null : productRepository.findById(item.getProductId());
+            }
+            productNames.put(detail.getId(), product == null ? "Unknown product" : product.getName());
+        }
+        return productNames;
     }
 
     public List<Order> getOrdersForSeller(String sellerId) {

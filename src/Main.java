@@ -617,7 +617,9 @@ public class Main {
         }
 
         List<OrderDetail> details = orderController.getOrderDetailsByOrderId(orderId);
-        orderView.displayOrderDetails(details, orderController.getProductNamesByOrderDetails(details));
+        orderView.displayOrderDetails(details,
+                orderController.getProductNamesByOrderDetails(details),
+                orderController.getSellerNamesByOrderDetails(details));
     }
 
     private Map<String, String> getEventNames(List<Order> orders) {

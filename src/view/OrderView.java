@@ -125,26 +125,31 @@ public class OrderView {
         System.out.println("--------------------------------------------------------------------------------------------------");
     }
 
-    public void displayOrderDetails(List<OrderDetail> details, Map<String, String> productNames) {
+    public void displayOrderDetails(List<OrderDetail> details, Map<String, String> productNames,
+                                    Map<String, String> sellerNames) {
         System.out.println("\n===== ORDER DETAILS =====");
         if (details == null || details.isEmpty()) {
             System.out.println("No order details found.");
             return;
         }
-        System.out.println("------------------------------------------------------------------------------------------");
-        System.out.printf("| %-28s | %-8s | %-14s | %-14s |%n",
-                "Product", "Qty", "Unit (VND)", "Subtotal");
-        System.out.println("------------------------------------------------------------------------------------------");
+        System.out.println("--------------------------------------------------------------------------------------------------------------");
+        System.out.printf("| %-28s | %-20s | %-8s | %-14s | %-14s |%n",
+                "Product", "Seller", "Qty", "Unit (VND)", "Subtotal");
+        System.out.println("--------------------------------------------------------------------------------------------------------------");
         for (OrderDetail detail : details) {
             String productName = productNames == null ? null : productNames.get(detail.getId());
             if (productName == null || productName.trim().isEmpty()) {
                 productName = "Unknown product";
             }
-            System.out.printf("| %-28s | %-8d | %-14.0f | %-14.0f |%n",
-                    fit(productName, 28), detail.getQuantity(),
+            String sellerName = sellerNames == null ? null : sellerNames.get(detail.getId());
+            if (sellerName == null || sellerName.trim().isEmpty()) {
+                sellerName = "Unknown seller";
+            }
+            System.out.printf("| %-28s | %-20s | %-8d | %-14.0f | %-14.0f |%n",
+                    fit(productName, 28), fit(sellerName, 20), detail.getQuantity(),
                     detail.getUnitPrice(), detail.getSubTotal());
         }
-        System.out.println("------------------------------------------------------------------------------------------");
+        System.out.println("--------------------------------------------------------------------------------------------------------------");
     }
 
     public void displayInventoryResult(FlashSaleItem item) {

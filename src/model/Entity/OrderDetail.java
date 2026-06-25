@@ -6,6 +6,7 @@ import model.BaseEntity.BaseEntity;
 public class OrderDetail extends BaseEntity {
 
     private String orderId;
+    private String eventId;
     private String flashItemId;
     private String productId;
     private int quantity;
@@ -19,14 +20,21 @@ public class OrderDetail extends BaseEntity {
     public OrderDetail(String id, LocalDateTime createdAt, LocalDateTime updatedAt,
                        String orderId, String flashItemId, int quantity,
                        double unitPrice, double subTotal) {
-        this(id, createdAt, updatedAt, orderId, flashItemId, null, quantity, unitPrice, subTotal);
+        this(id, createdAt, updatedAt, orderId, null, flashItemId, null, quantity, unitPrice, subTotal);
     }
 
     public OrderDetail(String id, LocalDateTime createdAt, LocalDateTime updatedAt,
                        String orderId, String flashItemId, String productId, int quantity,
                        double unitPrice, double subTotal) {
+        this(id, createdAt, updatedAt, orderId, null, flashItemId, productId, quantity, unitPrice, subTotal);
+    }
+
+    public OrderDetail(String id, LocalDateTime createdAt, LocalDateTime updatedAt,
+                       String orderId, String eventId, String flashItemId, String productId, int quantity,
+                       double unitPrice, double subTotal) {
         super(id, createdAt, updatedAt);
         this.orderId = orderId;
+        this.eventId = eventId;
         this.flashItemId = flashItemId;
         this.productId = productId;
         this.quantity = quantity;
@@ -36,6 +44,8 @@ public class OrderDetail extends BaseEntity {
 
     public String getOrderId() { return orderId; }
     public void setOrderId(String orderId) { this.orderId = orderId; }
+    public String getEventId() { return eventId; }
+    public void setEventId(String eventId) { this.eventId = eventId; }
     public String getFlashItemId() { return flashItemId; }
     public void setFlashItemId(String flashItemId) { this.flashItemId = flashItemId; }
     public String getProductId() { return productId; }
@@ -50,8 +60,8 @@ public class OrderDetail extends BaseEntity {
     @Override
     public String toCsvLine() {
         return String.join(",", escapeCsv(getId()), formatDateTime(getCreatedAt()),
-                formatDateTime(getUpdatedAt()), escapeCsv(orderId), escapeCsv(flashItemId),
-                escapeCsv(productId), String.valueOf(quantity), String.valueOf(unitPrice),
+                formatDateTime(getUpdatedAt()), escapeCsv(orderId), escapeCsv(eventId),
+                escapeCsv(flashItemId), escapeCsv(productId), String.valueOf(quantity), String.valueOf(unitPrice),
                 String.valueOf(subTotal));
     }
 
@@ -62,13 +72,23 @@ public class OrderDetail extends BaseEntity {
         setCreatedAt(LocalDateTime.parse(parts[1]));
         setUpdatedAt(LocalDateTime.parse(parts[2]));
         orderId = parts[3];
-        flashItemId = emptyToNull(parts[4]);
-        if (parts.length >= 9) {
+        if (parts.length >= 10) {
+            eventId = emptyToNull(parts[4]);
+            flashItemId = emptyToNull(parts[5]);
+            productId = emptyToNull(parts[6]);
+            quantity = Integer.parseInt(parts[7]);
+            unitPrice = Double.parseDouble(parts[8]);
+            subTotal = Double.parseDouble(parts[9]);
+        } else if (parts.length >= 9) {
+            eventId = null;
+            flashItemId = emptyToNull(parts[4]);
             productId = emptyToNull(parts[5]);
             quantity = Integer.parseInt(parts[6]);
             unitPrice = Double.parseDouble(parts[7]);
             subTotal = Double.parseDouble(parts[8]);
         } else {
+            eventId = null;
+            flashItemId = emptyToNull(parts[4]);
             productId = null;
             quantity = Integer.parseInt(parts[5]);
             unitPrice = Double.parseDouble(parts[6]);
@@ -84,6 +104,7 @@ public class OrderDetail extends BaseEntity {
     public String toString() {
         return "OrderDetail{" + "id='" + getId() + '\''
                 + ", orderId='" + orderId + '\''
+                + ", eventId='" + eventId + '\''
                 + ", flashItemId='" + flashItemId + '\''
                 + ", productId='" + productId + '\''
                 + ", quantity=" + quantity + ", unitPrice=" + unitPrice

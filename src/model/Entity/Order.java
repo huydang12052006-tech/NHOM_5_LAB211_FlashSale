@@ -17,7 +17,6 @@ public class Order extends BaseEntity {
     //         = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private String customerId;
-    private String eventId;
     private double totalAmount;
     private OrderStatus status;
     private LockMechanism lockMechanism;
@@ -31,14 +30,12 @@ public class Order extends BaseEntity {
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             String customerId,
-            String eventId,
             double totalAmount,
             OrderStatus status,
             LockMechanism lockMechanism) {
 
         super(id, createdAt, updatedAt);
         this.customerId = customerId;
-        this.eventId = eventId;
         this.totalAmount = totalAmount;
         this.status = status;
         this.lockMechanism = lockMechanism;
@@ -54,14 +51,6 @@ public class Order extends BaseEntity {
 
     public void setCustomerId(String customerId) {
         this.customerId = customerId;
-    }
-
-    public String getEventId() {
-        return eventId;
-    }
-
-    public void setEventId(String eventId) {
-        this.eventId = eventId;
     }
 
     public double getTotalAmount() {
@@ -99,7 +88,6 @@ public String toCsvLine() {
             formatDateTime(getCreatedAt()),
             formatDateTime(getUpdatedAt()),
             escapeCsv(customerId),
-            escapeCsv(eventId),
             String.valueOf(totalAmount),
             status.name(),
             lockMechanism.name()           
@@ -119,14 +107,14 @@ public void fromCsvLine(String csv) {
 
     this.customerId = parts[3];
 
-    this.eventId = parts[4].isEmpty() ? null : parts[4];
+    int offset = parts.length >= 8 ? 1 : 0;
 
-    this.totalAmount = Double.parseDouble(parts[5]);
+    this.totalAmount = Double.parseDouble(parts[4 + offset]);
 
-    this.status = OrderStatus.valueOf(parts[6]);
+    this.status = OrderStatus.valueOf(parts[5 + offset]);
 
     this.lockMechanism =
-            LockMechanism.valueOf(parts[7]);
+            LockMechanism.valueOf(parts[6 + offset]);
 
     
 }
@@ -137,7 +125,6 @@ public String toString() {
     return "Order{" +
             "id='" + getId() + '\'' +
             ", customerId='" + customerId + '\'' +
-            ", eventId='" + eventId + '\'' +
             ", totalAmount=" + totalAmount +
             ", status=" + status +
             ", lockMechanism=" + lockMechanism +

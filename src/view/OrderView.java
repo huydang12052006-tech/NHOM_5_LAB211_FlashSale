@@ -126,16 +126,16 @@ public class OrderView {
     }
 
     public void displayOrderDetails(List<OrderDetail> details, Map<String, String> productNames,
-                                    Map<String, String> sellerNames) {
+                                    Map<String, String> sellerNames, Map<String, String> eventNames) {
         System.out.println("\n===== ORDER DETAILS =====");
         if (details == null || details.isEmpty()) {
             System.out.println("No order details found.");
             return;
         }
-        System.out.println("--------------------------------------------------------------------------------------------------------------");
-        System.out.printf("| %-28s | %-20s | %-8s | %-14s | %-14s |%n",
-                "Product", "Seller", "Qty", "Unit (VND)", "Subtotal");
-        System.out.println("--------------------------------------------------------------------------------------------------------------");
+        System.out.println("---------------------------------------------------------------------------------------------------------------------------------");
+        System.out.printf("| %-28s | %-20s | %-24s | %-8s | %-14s | %-14s |%n",
+                "Product", "Seller", "Event", "Qty", "Unit (VND)", "Subtotal");
+        System.out.println("---------------------------------------------------------------------------------------------------------------------------------");
         for (OrderDetail detail : details) {
             String productName = productNames == null ? null : productNames.get(detail.getId());
             if (productName == null || productName.trim().isEmpty()) {
@@ -145,11 +145,15 @@ public class OrderView {
             if (sellerName == null || sellerName.trim().isEmpty()) {
                 sellerName = "Unknown seller";
             }
-            System.out.printf("| %-28s | %-20s | %-8d | %-14.0f | %-14.0f |%n",
-                    fit(productName, 28), fit(sellerName, 20), detail.getQuantity(),
+            String eventName = eventNames == null ? null : eventNames.get(detail.getId());
+            if (eventName == null || eventName.trim().isEmpty()) {
+                eventName = "Regular Product";
+            }
+            System.out.printf("| %-28s | %-20s | %-24s | %-8d | %-14.0f | %-14.0f |%n",
+                    fit(productName, 28), fit(sellerName, 20), fit(eventName, 24), detail.getQuantity(),
                     detail.getUnitPrice(), detail.getSubTotal());
         }
-        System.out.println("--------------------------------------------------------------------------------------------------------------");
+        System.out.println("---------------------------------------------------------------------------------------------------------------------------------");
     }
 
     public void displayInventoryResult(FlashSaleItem item) {
@@ -205,21 +209,15 @@ public class OrderView {
     }
 
     private String orderEventName(Order order, Map<String, String> eventNames) {
-        if (order.getEventId() == null) {
+        if (eventNames == null) {
             return "Regular Product";
         }
-        if (eventNames == null) {
-            return order.getEventId();
-        }
-        String eventName = eventNames.get(order.getEventId());
-        return eventName == null || eventName.trim().isEmpty() ? order.getEventId() : eventName;
+        String eventName = eventNames.get(order.getId());
+        return eventName == null || eventName.trim().isEmpty() ? "Regular Product" : eventName;
     }
 
     private String orderEventName(Order order, String eventName) {
-        if (order.getEventId() == null) {
-            return "Regular Product";
-        }
-        return eventName == null || eventName.trim().isEmpty() ? order.getEventId() : eventName;
+        return eventName == null || eventName.trim().isEmpty() ? "Regular Product" : eventName;
     }
 
     private String fit(String value, int maxLength) {

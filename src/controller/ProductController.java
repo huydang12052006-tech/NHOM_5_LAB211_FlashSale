@@ -6,29 +6,46 @@ import java.util.List;
 import java.util.ArrayList;
 
 import model.Entity.Product;
+import model.Entity.User;
 import repository.ProductRepository;
+import repository.UserRepository;
 
 public class ProductController {
 
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
 
     public ProductController(ProductRepository productRepository) {
         this.productRepository = productRepository;
+        this.userRepository = new UserRepository();
     }
 
     // ==================================
     // Read
     // ==================================
     public List<Product> getAllProducts() {
-        return productRepository.findAll();
+        List<Product> result = new ArrayList<Product>();
+        for (Product product : productRepository.findAll()) {
+            if (isVisibleForCustomers(product)) {
+                result.add(product);
+            }
+        }
+        return result;
     }
 
     public Product getProductById(String id) {
-        return productRepository.findById(id);
+        Product product = productRepository.findById(id);
+        return isVisibleForCustomers(product) ? product : null;
     }
 
     public List<Product> searchProducts(String keyword) {
-        return productRepository.searchByKeyword(keyword);
+        List<Product> result = new ArrayList<Product>();
+        for (Product product : productRepository.searchByKeyword(keyword)) {
+            if (isVisibleForCustomers(product)) {
+                result.add(product);
+            }
+        }
+        return result;
     }
 
     public List<Product> getProductsBySellerId(String sellerId) {
@@ -39,6 +56,18 @@ public class ProductController {
             }
         }
         return result;
+    }
+
+    public Product getAnyProductById(String id) {
+        return productRepository.findById(id);
+    }
+
+    public boolean isVisibleForCustomers(Product product) {
+        if (product == null || product.getStatus() != model.Enum.SaleStatus.ACTIVE) {
+            return false;
+        }
+        User seller = userRepository.findById(product.getSellerId());
+        return seller != null && seller.isActive();
     }
 
     // ==================================

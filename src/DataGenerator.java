@@ -176,9 +176,6 @@ public class DataGenerator {
         // orderId -> customerId
         private static final Map<String, String> orderCustomerMap = new HashMap<>();
 
-        // orderId -> eventId
-        private static final Map<String, String> orderEventMap = new HashMap<>();
-
         // orderId -> totalAmount
         private static final Map<String, Double> orderTotalMap = new HashMap<>();
 
@@ -624,10 +621,10 @@ public class DataGenerator {
                 BufferedWriter bwOrders = new BufferedWriter(new FileWriter("data/orders.csv"));
                 BufferedWriter bwDetails = new BufferedWriter(new FileWriter("data/order_details.csv"));
 
-                bwOrders.write("id,createdAt,updatedAt,customerId,eventId,totalAmount,status,lockMechanism");
+                bwOrders.write("id,createdAt,updatedAt,customerId,totalAmount,status,lockMechanism");
                 bwOrders.newLine();
 
-                bwDetails.write("id,createdAt,updatedAt,orderId,flashItemId,productId,quantity,unitPrice,subTotal");
+                bwDetails.write("id,createdAt,updatedAt,orderId,eventId,flashItemId,productId,quantity,unitPrice,subTotal");
                 bwDetails.newLine();
 
                 int detailCounter = 0;
@@ -746,6 +743,7 @@ public class DataGenerator {
                                                 createdAt.format(formatter),
                                                 updatedAt.format(formatter),
                                                 orderId,
+                                                eventId,
                                                 flashItemId,
                                                 productId,
                                                 String.valueOf(actualQuantity),
@@ -763,7 +761,6 @@ public class DataGenerator {
 
                         // Store order info for Payment & OrderTransaction generation
                         orderCustomerMap.put(orderId, customerId);
-                        orderEventMap.put(orderId, eventId);
                         orderTotalMap.put(orderId, totalAmount);
                         orderStatusMap.put(orderId, status);
                         orderLockMap.put(orderId, lock);
@@ -773,7 +770,6 @@ public class DataGenerator {
                                         createdAt.format(formatter),
                                         updatedAt.format(formatter),
                                         customerId,
-                                        eventId,
                                         String.valueOf((long) totalAmount),
                                         status,
                                         lock));

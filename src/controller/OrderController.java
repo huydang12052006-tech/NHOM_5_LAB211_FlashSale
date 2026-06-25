@@ -143,7 +143,6 @@ public class OrderController {
                     now,
                     now,
                     customerId,
-                    flashItem.getEventId(),
                     totalAmount,
                     OrderStatus.PENDING,
                     mechanism
@@ -158,6 +157,7 @@ public class OrderController {
                     now,
                     now,
                     orderId,
+                    flashItem.getEventId(),
                     flashItemId,
                     flashItem.getProductId(),
                     quantity,
@@ -189,6 +189,7 @@ public class OrderController {
         }
 
         Map<String, Product> cartProducts = new LinkedHashMap<String, Product>();
+        String sellerId = null;
         double totalAmount = 0.0;
         for (Map.Entry<String, Integer> entry : products.entrySet()) {
             int quantity = entry.getValue() == null ? 0 : entry.getValue();
@@ -201,6 +202,11 @@ public class OrderController {
             }
             if (product.getStockQty() < quantity) {
                 throw new OutOfStockException("Not enough stock for " + product.getId());
+            }
+            if (sellerId == null) {
+                sellerId = getSellerId(product);
+            } else if (!sellerId.equalsIgnoreCase(getSellerId(product))) {
+                throw new FlashSaleException("Order items must belong to one seller");
             }
             cartProducts.put(product.getId(), product);
             totalAmount += product.getOriginalPrice() * quantity;
@@ -217,7 +223,7 @@ public class OrderController {
         }
 
         String orderId = orderRepository.generateNextId();
-        orderRepository.save(new Order(orderId, now, now, customerId, null,
+        orderRepository.save(new Order(orderId, now, now, customerId,
                 totalAmount, OrderStatus.PENDING, mechanism));
         OrderDetailRepository detailRepository = new OrderDetailRepository();
         for (Map.Entry<String, Integer> entry : products.entrySet()) {
@@ -231,9 +237,8 @@ public class OrderController {
     }
 
     /**
-     * Creates one order and one detail per cart entry. The current CSV schema
-     * stores a single event on an order, so a cart is intentionally restricted
-     * to items from one event.
+     * Creates one order and one detail per flash-sale cart entry. Event belongs
+     * to each detail, so one seller order may contain items from many events.
      */
     public String placeCartOrder(String customerId, Map<String, Integer> cart,
                                  LockMechanism mechanism)
@@ -247,7 +252,7 @@ public class OrderController {
         }
 
         Map<String, FlashSaleItem> items = new LinkedHashMap<String, FlashSaleItem>();
-        String eventId = null;
+        String sellerId = null;
         double totalAmount = 0.0;
         for (Map.Entry<String, Integer> entry : cart.entrySet()) {
             int quantity = entry.getValue() == null ? 0 : entry.getValue();
@@ -255,10 +260,11 @@ public class OrderController {
             if (item == null || quantity <= 0) {
                 throw new FlashSaleException("Invalid cart item: " + entry.getKey());
             }
-            if (eventId == null) {
-                eventId = item.getEventId();
-            } else if (!eventId.equals(item.getEventId())) {
-                throw new FlashSaleException("Cart items must belong to one flash event");
+            Product product = productRepository.findById(item.getProductId());
+            if (sellerId == null) {
+                sellerId = getSellerId(product);
+            } else if (!sellerId.equalsIgnoreCase(getSellerId(product))) {
+                throw new FlashSaleException("Order items must belong to one seller");
             }
             if (getPurchasedQuantity(customerId, item.getId()) + quantity > 2) {
                 throw new PurchaseLimitExceededException("Maximum 2 items per customer/event");
@@ -295,7 +301,7 @@ public class OrderController {
 
         LocalDateTime now = LocalDateTime.now();
         String orderId = orderRepository.generateNextId();
-        orderRepository.save(new Order(orderId, now, now, customerId, eventId,
+        orderRepository.save(new Order(orderId, now, now, customerId,
                 totalAmount, OrderStatus.PENDING, mechanism));
 
         OrderDetailRepository detailRepository = new OrderDetailRepository();
@@ -303,7 +309,8 @@ public class OrderController {
             FlashSaleItem item = items.get(entry.getKey());
             double subTotal = item.getFlashPrice() * entry.getValue();
             detailRepository.save(new OrderDetail(detailRepository.generateNextId(), now, now,
-                    orderId, item.getId(), item.getProductId(), entry.getValue(), item.getFlashPrice(), subTotal));
+                    orderId, item.getEventId(), item.getId(), item.getProductId(), entry.getValue(),
+                    item.getFlashPrice(), subTotal));
         }
         return orderId;
     }
@@ -313,36 +320,52 @@ public class OrderController {
         if (cartItems == null || cartItems.isEmpty()) {
             throw new FlashSaleException("Cart is empty");
         }
-        Map<String, Integer> regularProducts = new LinkedHashMap<String, Integer>();
-        Map<String, Map<String, Integer>> flashItemsByEvent = new LinkedHashMap<String, Map<String, Integer>>();
+        Map<String, Map<String, Integer>> regularProductsBySeller = new LinkedHashMap<String, Map<String, Integer>>();
+        Map<String, Map<String, Integer>> flashItemsBySeller = new LinkedHashMap<String, Map<String, Integer>>();
         for (CartItem cartItem : cartItems) {
             if (cartItem.getFlashItemId() != null) {
                 FlashSaleItem item = flashSaleItemRepository.findById(cartItem.getFlashItemId());
                 if (item == null) {
                     throw new FlashSaleException("Flash sale item no longer exists: " + cartItem.getFlashItemId());
                 }
-                Map<String, Integer> eventItems = flashItemsByEvent.get(item.getEventId());
-                if (eventItems == null) {
-                    eventItems = new LinkedHashMap<String, Integer>();
-                    flashItemsByEvent.put(item.getEventId(), eventItems);
+                Product product = productRepository.findById(item.getProductId());
+                String sellerId = getSellerId(product);
+                Map<String, Integer> sellerItems = flashItemsBySeller.get(sellerId);
+                if (sellerItems == null) {
+                    sellerItems = new LinkedHashMap<String, Integer>();
+                    flashItemsBySeller.put(sellerId, sellerItems);
                 }
-                eventItems.put(item.getId(), eventItems.getOrDefault(item.getId(), 0) + cartItem.getQuantity());
+                sellerItems.put(item.getId(), sellerItems.getOrDefault(item.getId(), 0) + cartItem.getQuantity());
             } else if (cartItem.getProductId() != null) {
-                regularProducts.put(cartItem.getProductId(),
-                        regularProducts.getOrDefault(cartItem.getProductId(), 0) + cartItem.getQuantity());
+                Product product = productRepository.findById(cartItem.getProductId());
+                String sellerId = getSellerId(product);
+                Map<String, Integer> sellerProducts = regularProductsBySeller.get(sellerId);
+                if (sellerProducts == null) {
+                    sellerProducts = new LinkedHashMap<String, Integer>();
+                    regularProductsBySeller.put(sellerId, sellerProducts);
+                }
+                sellerProducts.put(cartItem.getProductId(),
+                        sellerProducts.getOrDefault(cartItem.getProductId(), 0) + cartItem.getQuantity());
             } else {
                 throw new FlashSaleException("Cart item has no product reference: " + cartItem.getId());
             }
         }
 
         List<String> orderIds = new ArrayList<String>();
-        if (!regularProducts.isEmpty()) {
-            orderIds.add(placeRegularCartOrder(customerId, regularProducts, mechanism));
+        for (Map<String, Integer> sellerProducts : regularProductsBySeller.values()) {
+            orderIds.add(placeRegularCartOrder(customerId, sellerProducts, mechanism));
         }
-        for (Map<String, Integer> flashItems : flashItemsByEvent.values()) {
+        for (Map<String, Integer> flashItems : flashItemsBySeller.values()) {
             orderIds.add(placeCartOrder(customerId, flashItems, mechanism));
         }
         return orderIds;
+    }
+
+    private String getSellerId(Product product) throws FlashSaleException {
+        if (product == null || product.getSellerId() == null || product.getSellerId().trim().isEmpty()) {
+            throw new FlashSaleException("Product seller not found");
+        }
+        return product.getSellerId();
     }
 
     public Customer getCustomerByUserId(String userId) {

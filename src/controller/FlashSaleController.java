@@ -6,16 +6,19 @@ import java.util.List;
 import model.Entity.FlashSaleEvent;
 import model.Entity.FlashSaleItem;
 import model.Entity.Product;
+import model.Entity.User;
 import model.Enum.SaleStatus;
 import repository.FlashSaleItemRepository;
 import repository.FlashSaleRepository;
 import repository.ProductRepository;
+import repository.UserRepository;
 
 public class FlashSaleController {
 
     private final FlashSaleRepository flashSaleRepository;
     private final FlashSaleItemRepository flashSaleItemRepository;
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
 
     public FlashSaleController(FlashSaleRepository flashSaleRepository,
                                FlashSaleItemRepository flashSaleItemRepository,
@@ -23,6 +26,7 @@ public class FlashSaleController {
         this.flashSaleRepository = flashSaleRepository;
         this.flashSaleItemRepository = flashSaleItemRepository;
         this.productRepository = productRepository;
+        this.userRepository = new UserRepository();
     }
 
     // ==================================
@@ -58,6 +62,7 @@ public class FlashSaleController {
             Product product = productRepository.findById(item.getProductId());
             if (item.getStatus() == SaleStatus.ACTIVE
                     && product != null && product.getStatus() == SaleStatus.ACTIVE
+                    && isSellerActive(product)
                     && item.getLimitedQty() > item.getSoldQty()) {
                 result.add(item);
             }
@@ -188,7 +193,16 @@ public class FlashSaleController {
     }
 
     public Product getProductById(String productId) {
-        return productRepository.findById(productId);
+        Product product = productRepository.findById(productId);
+        return isSellerActive(product) ? product : null;
+    }
+
+    private boolean isSellerActive(Product product) {
+        if (product == null || product.getSellerId() == null) {
+            return false;
+        }
+        User seller = userRepository.findById(product.getSellerId());
+        return seller != null && seller.isActive();
     }
 
     public boolean updateFlashItem(String eventId, String productId, String sellerId,

@@ -619,27 +619,48 @@ public class Main {
         List<OrderDetail> details = orderController.getOrderDetailsByOrderId(orderId);
         orderView.displayOrderDetails(details,
                 orderController.getProductNamesByOrderDetails(details),
-                orderController.getSellerNamesByOrderDetails(details));
+                orderController.getSellerNamesByOrderDetails(details),
+                getEventNamesByDetails(details));
     }
 
     private Map<String, String> getEventNames(List<Order> orders) {
         Map<String, String> eventNames = new LinkedHashMap<String, String>();
         for (Order order : orders) {
-            if (order.getEventId() != null && !eventNames.containsKey(order.getEventId())) {
-                FlashSaleEvent event = flashSaleController.getEventById(order.getEventId());
-                eventNames.put(order.getEventId(),
-                        event == null ? order.getEventId() : event.getEventName());
-            }
+            eventNames.put(order.getId(), getEventName(order));
         }
         return eventNames;
     }
 
     private String getEventName(Order order) {
-        if (order == null || order.getEventId() == null) {
-            return null;
+        if (order == null) {
+            return "";
         }
-        FlashSaleEvent event = flashSaleController.getEventById(order.getEventId());
-        return event == null ? order.getEventId() : event.getEventName();
+        List<OrderDetail> details = orderController.getOrderDetailsByOrderId(order.getId());
+        Map<String, String> names = new LinkedHashMap<String, String>();
+        for (OrderDetail detail : details) {
+            if (detail.getEventId() == null) {
+                continue;
+            }
+            FlashSaleEvent event = flashSaleController.getEventById(detail.getEventId());
+            names.put(detail.getEventId(), event == null ? detail.getEventId() : event.getEventName());
+        }
+        if (names.isEmpty()) {
+            return "Regular Product";
+        }
+        return String.join(", ", names.values());
+    }
+
+    private Map<String, String> getEventNamesByDetails(List<OrderDetail> details) {
+        Map<String, String> eventNames = new LinkedHashMap<String, String>();
+        for (OrderDetail detail : details) {
+            if (detail.getEventId() == null) {
+                eventNames.put(detail.getId(), "Regular Product");
+                continue;
+            }
+            FlashSaleEvent event = flashSaleController.getEventById(detail.getEventId());
+            eventNames.put(detail.getId(), event == null ? detail.getEventId() : event.getEventName());
+        }
+        return eventNames;
     }
 
     private void addProduct() {
@@ -656,7 +677,7 @@ public class Main {
             return;
         }
         String productId = productView.inputProductId();
-        Product product = productController.getProductById(productId);
+        Product product = productController.getAnyProductById(productId);
         if (product == null || !sellerId.equalsIgnoreCase(product.getSellerId())) {
             productView.showProductNotFound();
             return;
@@ -681,7 +702,7 @@ public class Main {
 
     private void editProductInformation() {
         String productId = productView.inputProductId();
-        Product product = productController.getProductById(productId);
+        Product product = productController.getAnyProductById(productId);
 
         if (product == null) {
             productView.showProductNotFound();
@@ -696,7 +717,7 @@ public class Main {
 
     private void editProductPrice() {
         String productId = productView.inputProductId();
-        Product product = productController.getProductById(productId);
+        Product product = productController.getAnyProductById(productId);
 
         if (product == null) {
             productView.showProductNotFound();
@@ -710,7 +731,7 @@ public class Main {
 
     private void deleteProduct() {
         String productId = productView.inputProductId();
-        Product product = productController.getProductById(productId);
+        Product product = productController.getAnyProductById(productId);
         if (product == null || !authController.getCurrentUser().getId().equalsIgnoreCase(product.getSellerId())) {
             productView.showProductNotFound();
             return;
@@ -745,7 +766,7 @@ public class Main {
             return;
         }
         String productId = productView.inputProductId();
-        Product product = productController.getProductById(productId);
+        Product product = productController.getAnyProductById(productId);
         if (product == null || !authController.getCurrentUser().getId().equalsIgnoreCase(product.getSellerId())) {
             flashSaleView.showProductNotFound();
             return;
@@ -768,7 +789,7 @@ public class Main {
         String eventId = flashSaleView.inputEventId();
         List<Product> products = new java.util.ArrayList<Product>();
         for (FlashSaleItem item : flashSaleController.getFlashItemsByEventId(eventId)) {
-            Product candidate = productController.getProductById(item.getProductId());
+            Product candidate = productController.getAnyProductById(item.getProductId());
             if (candidate != null && authController.getCurrentUser().getId().equalsIgnoreCase(candidate.getSellerId())) {
                 products.add(candidate);
             }
@@ -779,7 +800,7 @@ public class Main {
             return;
         }
         String productId = productView.inputProductId();
-        Product product = productController.getProductById(productId);
+        Product product = productController.getAnyProductById(productId);
         if (product == null || !authController.getCurrentUser().getId().equalsIgnoreCase(product.getSellerId())) {
             flashSaleView.showProductNotFound();
             return;

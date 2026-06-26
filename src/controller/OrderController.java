@@ -55,122 +55,14 @@ public class OrderController {
     /*
         Main order placement flow
      */
-    public String placeOrder(String customerId,
+    public String placeFLashItem(String customerId,
                              String flashItemId,
                              int quantity,
                              LockMechanism mechanism)
             throws IOException, FlashSaleException {
-
-        // =========================
-        // VALIDATE QUANTITY
-        // =========================
-        if (quantity <= 0) {
-            throw new InvalidQuantityException(
-                    "Quantity must be greater than 0"
-            );
-        }
-
-        // =========================
-        // VALIDATE CUSTOMER
-        // =========================
-        Customer customer = customerRepository.findById(customerId);
-        if (customer == null) {
-            throw new FlashSaleException(
-                    "Customer not found"
-            );
-        }
-
-        // =========================
-        // VALIDATE FLASH ITEM
-        // =========================
-        FlashSaleItem flashItem = flashSaleItemRepository.findById(flashItemId);
-        if (flashItem == null) {
-            throw new FlashSaleException(
-                    "FlashSaleItem not found"
-            );
-        }
-
-        // =========================
-        // VALIDATE PURCHASE LIMIT
-        // mỗi customer tối đa 2 item/event
-        // =========================
-        int purchasedQty = orderRepository.getPurchasedQuantity(customerId, flashItemId);
-        if (purchasedQty + quantity > 2) {
-            throw new PurchaseLimitExceededException(
-                    "Maximum 2 items per customer/event"
-            );
-        }
-
-        // =========================
-        // VALIDATE STOCK
-        // =========================
-        int remainingStock = flashItem.getLimitedQty() - flashItem.getSoldQty();
-        if (remainingStock < quantity) {
-            throw new OutOfStockException(
-                    "Not enough stock"
-            );
-        }
-
-        // =========================
-        // CHOOSE LOCK MECHANISM
-        // =========================
-        boolean result;
-        switch (mechanism) {
-            case NO_LOCK:
-                result = flashSaleItemRepository.sellWithNoLock(flashItemId, quantity);
-                break;
-            case SYNCHRONIZED:
-                result = flashSaleItemRepository.sellWithSynchronized(flashItemId, quantity);
-                break;
-            case FILE_LOCK:
-                result = flashSaleItemRepository.sellWithFileLock(flashItemId, quantity);
-                break;
-            case OPTIMISTIC_LOCK:
-                result = flashSaleItemRepository.sellWithOptimisticLock(flashItemId, quantity);
-                break;
-            default:
-                throw new FlashSaleException("Unknown lock mechanism");
-        }
-
-        if (result) {
-            String orderId = orderRepository.generateNextId();
-            LocalDateTime now = LocalDateTime.now();
-            double flashPrice = flashItem.getFlashPrice();
-            double totalAmount = flashPrice * quantity;
-
-            // Save Order
-            Order order = new Order(
-                    orderId,
-                    now,
-                    now,
-                    customerId,
-                    totalAmount,
-                    OrderStatus.PENDING,
-                    mechanism
-            );
-            orderRepository.save(order);
-
-            // Save OrderDetail
-            OrderDetailRepository detailRepo = new OrderDetailRepository();
-            String detailId = detailRepo.generateNextId();
-            OrderDetail detail = new OrderDetail(
-                    detailId,
-                    now,
-                    now,
-                    orderId,
-                    flashItem.getEventId(),
-                    flashItemId,
-                    flashItem.getProductId(),
-                    quantity,
-                    flashPrice,
-                    totalAmount
-            );
-            detailRepo.save(detail);
-
-            return orderId;
-        }
-
-        return null;
+        Map<String, Integer> cart = new LinkedHashMap<String, Integer>();
+        cart.put(flashItemId, quantity);
+        return placeFLashItemCart(customerId, cart, mechanism);
     }
 
     public String placeRegularOrder(String customerId, String productId, int quantity,
@@ -241,7 +133,7 @@ public class OrderController {
      * Creates one order and one detail per flash-sale cart entry. Event belongs
      * to each detail, so one seller order may contain items from many events.
      */
-    public String placeCartOrder(String customerId, Map<String, Integer> cart,
+    public String placeFLashItemCart(String customerId, Map<String, Integer> cart,
                                  LockMechanism mechanism)
             throws IOException, FlashSaleException {
         if (cart == null || cart.isEmpty()) {
@@ -258,7 +150,10 @@ public class OrderController {
         for (Map.Entry<String, Integer> entry : cart.entrySet()) {
             int quantity = entry.getValue() == null ? 0 : entry.getValue();
             FlashSaleItem item = flashSaleItemRepository.findById(entry.getKey());
-            if (item == null || quantity <= 0) {
+            if (quantity <= 0) {
+                throw new InvalidQuantityException("Quantity must be greater than 0");
+            }
+            if (item == null) {
                 throw new FlashSaleException("Invalid cart item: " + entry.getKey());
             }
             Product product = productRepository.findById(item.getProductId());
@@ -357,7 +252,7 @@ public class OrderController {
             orderIds.add(placeRegularCartOrder(customerId, sellerProducts, mechanism));
         }
         for (Map<String, Integer> flashItems : flashItemsBySeller.values()) {
-            orderIds.add(placeCartOrder(customerId, flashItems, mechanism));
+            orderIds.add(placeFLashItemCart(customerId, flashItems, mechanism));
         }
         return orderIds;
     }

@@ -383,7 +383,7 @@ public class Main {
 
             int quantity = orderView.inputQuantity();
 
-            String orderId = orderController.placeOrder(
+            String orderId = orderController.placeFLashItem(
                     customer.getId(),
                     flashItemId,
                     quantity,
@@ -420,7 +420,7 @@ public class Main {
         if (orderType == 2) {
             orderRegularProduct();
         } else {
-            shopeeCheckout();
+            orderFlashsaletem();
         }
     }
 
@@ -563,7 +563,7 @@ public class Main {
             String flashItemId = flashSaleView.inputFlashItemId();
             int quantity = orderView.inputQuantity();
 
-            String orderId = orderController.placeOrder(
+            String orderId = orderController.placeFLashItem(
                     customerId,
                     flashItemId,
                     quantity,
@@ -1184,7 +1184,7 @@ public class Main {
         offerPlaceOrderFromProducts(activeProducts);
     }
 
-    private void shopeeCheckout() {
+    private void orderFlashsaletem() {
         try {
             User currentUser = authController.getCurrentUser();
             if (currentUser == null) {
@@ -1240,7 +1240,7 @@ public class Main {
 
             int quantity = orderView.inputQuantity();
 
-            String orderId = orderController.placeOrder(
+            String orderId = orderController.placeFLashItem(
                     customer.getId(),
                     flashItemId,
                     quantity,

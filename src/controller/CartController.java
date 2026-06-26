@@ -214,10 +214,7 @@ public class CartController {
     private void checkoutCart(String customerId, LockMechanism mechanism,
                               List<CartItem> cartItems, boolean showItems) {
         try {
-//            if (cartItems == null || cartItems.isEmpty()) {
-//                System.out.println("Cart is empty.");
-//                return;
-//            }
+
             if (showItems) {
                 System.out.println("\n===== CHECKOUT CART =====");
                 double total = displayCartItems(cartItems);

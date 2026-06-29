@@ -146,13 +146,13 @@ public class RepositoryCrudJUnitTest {
                 testFile("orders.csv"),
                 "orders.csv",
                 new Order("JUNIT_O001", CREATED_AT, UPDATED_AT,
-                        "JUNIT_C001", "JUNIT_E001", 1000.0, OrderStatus.PENDING,
+                        "JUNIT_C001", 1000.0, OrderStatus.PENDING,
                         LockMechanism.NO_LOCK),
                 new Order("JUNIT_O002", CREATED_AT, UPDATED_AT,
-                        "JUNIT_C002", "JUNIT_E001", 2000.0, OrderStatus.SUCCESS,
+                        "JUNIT_C002", 2000.0, OrderStatus.SUCCESS,
                         LockMechanism.SYNCHRONIZED),
                 new Order("JUNIT_O002", CREATED_AT, UPDATED_AT,
-                        "JUNIT_C002", "JUNIT_E001", 2500.0, OrderStatus.SUCCESS,
+                        "JUNIT_C002",  2500.0, OrderStatus.SUCCESS,
                         LockMechanism.OPTIMISTIC_LOCK));
     }
 

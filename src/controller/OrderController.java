@@ -441,9 +441,57 @@ public class OrderController {
                 || !orderBelongsToSeller(orderId, sellerId)) {
             return false;
         }
+        LocalDateTime now = LocalDateTime.now();
+        if (!restoreStockForCancelledOrder(orderId, now)) {
+            return false;
+        }
         order.setStatus(OrderStatus.CANCELLED);
-        order.setUpdatedAt(LocalDateTime.now());
+        order.setUpdatedAt(now);
         return orderRepository.update(order);
+    }
+
+    private boolean restoreStockForCancelledOrder(String orderId, LocalDateTime now) {
+        List<OrderDetail> details = getOrderDetailsByOrderId(orderId);
+        if (details.isEmpty()) {
+            return false;
+        }
+        for (OrderDetail detail : details) {
+            if (detail.getQuantity() <= 0) {
+                return false;
+            }
+            if (detail.getFlashItemId() != null) {
+                if (!restoreFlashSaleStock(detail, now)) {
+                    return false;
+                }
+            } else if (detail.getProductId() != null) {
+                if (!restoreRegularProductStock(detail, now)) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean restoreRegularProductStock(OrderDetail detail, LocalDateTime now) {
+        Product product = productRepository.findById(detail.getProductId());
+        if (product == null) {
+            return false;
+        }
+        product.setStockQty(product.getStockQty() + detail.getQuantity());
+        product.setUpdatedAt(now);
+        return productRepository.update(product);
+    }
+
+    private boolean restoreFlashSaleStock(OrderDetail detail, LocalDateTime now) {
+        FlashSaleItem item = flashSaleItemRepository.findById(detail.getFlashItemId());
+        if (item == null) {
+            return false;
+        }
+        item.setSoldQty(Math.max(0, item.getSoldQty() - detail.getQuantity()));
+        item.setUpdatedAt(now);
+        return flashSaleItemRepository.update(item);
     }
 
     private boolean orderBelongsToSeller(String orderId, String sellerId) {

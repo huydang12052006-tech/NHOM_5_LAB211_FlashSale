@@ -157,7 +157,7 @@ public class CsvLineJUnitTest {
     void orderToCsvLine() {
         Order order = new Order(
                 "O001", CREATED_AT, UPDATED_AT,
-                "C001", "E001", 2400.0,
+                "C001", 2400.0,
                 OrderStatus.SUCCESS, LockMechanism.OPTIMISTIC_LOCK);
 
         assertEquals(
@@ -176,7 +176,6 @@ public class CsvLineJUnitTest {
 
         assertBaseFields(order, "O002");
         assertEquals("C002", order.getCustomerId());
-        assertEquals("E002", order.getEventId());
         assertEquals(150.25, order.getTotalAmount(), DELTA);
         assertEquals(OrderStatus.FAILED, order.getStatus());
         assertEquals(LockMechanism.SYNCHRONIZED, order.getLockMechanism());
@@ -213,14 +212,14 @@ public class CsvLineJUnitTest {
 
     @Test
     void regularOrderUsesEmptyEventAndFlashItem() {
-        Order order = new Order("O003", CREATED_AT, UPDATED_AT, "C003", null,
+        Order order = new Order("O003", CREATED_AT, UPDATED_AT, "C003",
                 500.0, OrderStatus.PENDING, LockMechanism.NO_LOCK);
         OrderDetail detail = new OrderDetail("OD003", CREATED_AT, UPDATED_AT,
                 "O003", null, "P003", 1, 500.0, 500.0);
 
-        assertEquals("O003,2026-01-02T03:04:05,2026-02-03T04:05:06,C003,,500.0,PENDING,NO_LOCK",
+        assertEquals("O003,2026-01-02T03:04:05,2026-02-03T04:05:06,C003,500.0,PENDING,NO_LOCK",
                 order.toCsvLine());
-        assertEquals("OD003,2026-01-02T03:04:05,2026-02-03T04:05:06,O003,,P003,1,500.0,500.0",
+        assertEquals("OD003,2026-01-02T03:04:05,2026-02-03T04:05:06,O003,P003,1,500.0,500.0",
                 detail.toCsvLine());
     }
 

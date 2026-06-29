@@ -288,6 +288,7 @@ public class OrderController {
                 "User_" + userId,
                 "0000000000",
                 "user_" + userId + "@gmail.com",
+                "",
                 model.Enum.CustomerTier.NORMAL,
                 0.0,
                 true

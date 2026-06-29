@@ -21,6 +21,7 @@ import model.Enum.LockMechanism;
 import model.Enum.PaymentMethod;
 import model.Enum.SaleStatus;
 import model.Enum.UserRole;
+import repository.CustomerRepository;
 import view.FlashSaleView;
 import view.OrderView;
 import view.ProductView;
@@ -36,6 +37,7 @@ public class Main {
     private final FlashSaleController flashSaleController;
     private final OrderController orderController;
     private final SimulatorController simulatorController;
+    private final CustomerRepository customerRepository;
 
     private final ProductView productView;
     private final OrderView orderView;
@@ -61,6 +63,7 @@ public class Main {
                 new repository.FlashSaleItemRepository(),
                 new repository.ProductRepository());
         this.orderController = new OrderController();
+        this.customerRepository = new CustomerRepository();
         this.authController = new AuthController(new repository.UserRepository(), new view.AuthView(scanner));
         this.cartController = new CartController(
                 new repository.CartRepository(),
@@ -171,6 +174,7 @@ public class Main {
             System.out.println("4. Place order");
             System.out.println("5. My Cart");
             System.out.println("6. My Orders");
+            System.out.println("7. My Address");
             System.out.println("0. Sign Out");
             System.out.print("Choose: ");
 
@@ -188,12 +192,48 @@ public class Main {
                 cartController.showCart(authController.getCurrentUser(), selectedLockMechanism);
             } else if ("6".equals(choice)) {
                 viewMyOrders();
+            } else if ("7".equals(choice)) {
+                updateMyAddress();
             } else if ("0".equals(choice)) {
                 authController.logout();
                 back = true;
             } else {
                 System.out.println("Invalid choice.");
             }
+        }
+    }
+
+    private void updateMyAddress() {
+        User currentUser = authController.getCurrentUser();
+        if (currentUser == null) {
+            System.out.println("[ERROR] Not authenticated");
+            return;
+        }
+
+        model.Entity.Customer customer = orderController.getCustomerByUserId(currentUser.getId());
+        if (customer == null) {
+            System.out.println("[ERROR] Customer record not found");
+            return;
+        }
+
+        String currentAddress = customer.getAddress();
+        System.out.println("\n===== MY ADDRESS =====");
+        System.out.println("Current address: "
+                + (currentAddress == null || currentAddress.trim().isEmpty()
+                        ? "Not set"
+                        : currentAddress));
+        System.out.print("Enter new address: ");
+        String address = scanner.nextLine().trim();
+
+        if (address.isEmpty()) {
+            System.out.println("[INFO] Address was not changed.");
+            return;
+        }
+
+        if (customerRepository.updateAddress(customer.getId(), address)) {
+            System.out.println("[SUCCESS] Address saved.");
+        } else {
+            System.out.println("[FAILED] Address could not be saved.");
         }
     }
 
@@ -255,56 +295,22 @@ public class Main {
         while (!back) {
             System.out.println();
             System.out.println("===== ADMINISTRATION =====");
-            System.out.println("1. System Overview");
-            System.out.println("2. Stock Overview");
-            System.out.println("3. Sales Activity");
-            System.out.println("4. Stock Alerts");
-            System.out.println("5. Set Test Order Quantity");
-            System.out.println("6. Choose Order Processing Mode");
-            System.out.println("7. Run Order Test");
-            System.out.println("8. View Orders per Second");
-            System.out.println("9. View Retry Rate");
-            System.out.println("10. View Stock Issue Rate");
-            System.out.println("11. Save Test Report");
-            System.out.println("12. Create a Sale Event");
-            System.out.println("13. Edit a Sale Event");
-            System.out.println("14. Manage Accounts");
-            System.out.println("15. View Account Details");
+            System.out.println("1. Create a Sale Event");
+            System.out.println("2. Edit a Sale Event");
+            System.out.println("3. Manage Accounts");
+            System.out.println("4. View Account Details");
             System.out.println("0. Sign Out");
             System.out.print("Choose: ");
 
             String choice = scanner.nextLine().trim();
 
             if ("1".equals(choice)) {
-                viewSystemDashboard();
-            } else if ("2".equals(choice)) {
-                viewInventoryReport();
-            } else if ("3".equals(choice)) {
-                viewThroughputReport();
-            } else if ("4".equals(choice)) {
-                viewNegativeStockReport();
-            } else if ("5".equals(choice)) {
-                configureThreadCount();
-            } else if ("6".equals(choice)) {
-                selectedLockMechanism = simulatorView.inputLockMechanism();
-                System.out.println("Selected lock mechanism: " + selectedLockMechanism);
-            } else if ("7".equals(choice)) {
-                runConcurrentOrders();
-            } else if ("8".equals(choice)) {
-                System.out.println("TPS: " + simulatorController.measureTPS());
-            } else if ("9".equals(choice)) {
-                measureRetryRate();
-            } else if ("10".equals(choice)) {
-                measureNegativeStockRate();
-            } else if ("11".equals(choice)) {
-                exportSimulationResult();
-            } else if ("12".equals(choice)) {
                 createFlashEvent();
-            } else if ("13".equals(choice)) {
+            } else if ("2".equals(choice)) {
                 manageFlashEvent();
-            } else if ("14".equals(choice)) {
+            } else if ("3".equals(choice)) {
                 manageAccount();
-            } else if ("15".equals(choice)) {
+            } else if ("4".equals(choice)) {
                 viewAccount();
             } else if ("0".equals(choice)) {
                 authController.logout();

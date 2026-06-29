@@ -41,6 +41,15 @@ public class DataGenerator {
                         "Quan", "Son", "Trang", "Vy", "Yen"
         };
 
+        private static final String[] STREET_NAMES = {
+                        "Nguyen Trai", "Le Loi", "Tran Hung Dao", "Hai Ba Trung",
+                        "Vo Van Tan", "Pham Van Dong", "Dien Bien Phu", "Nguyen Hue"
+        };
+
+        private static final String[] CITY_NAMES = {
+                        "Ho Chi Minh", "Ha Noi", "Da Nang", "Can Tho", "Hai Phong"
+        };
+
         private static final String[] CATEGORIES = {
                         "Laptop",
                         "Smartphone",
@@ -864,7 +873,7 @@ public class DataGenerator {
 
                 BufferedWriter bw = new BufferedWriter(new FileWriter("data/customers.csv"));
 
-                bw.write("id,createdAt,updatedAt,userId,fullName,phone,email,tier,totalSpent,active");
+                bw.write("id,createdAt,updatedAt,userId,fullName,phone,email,address,tier,totalSpent,active");
                 bw.newLine();
 
                 for (int i = 1; i <= NUM_CUSTOMERS; i++) {
@@ -881,6 +890,7 @@ public class DataGenerator {
                         String email = createEmail(fullName, i);
 
                         String phone = "09" + (10000000 + random.nextInt(89999999));
+                        String address = randomAddress();
 
                         double totalSpent = customerSpentMap.getOrDefault(id, 0.0);
 
@@ -904,6 +914,7 @@ public class DataGenerator {
                                         fullName,
                                         phone,
                                         email,
+                                        address,
                                         tier,
                                         String.valueOf((long) totalSpent),
                                         String.valueOf(active)));
@@ -1140,6 +1151,13 @@ public class DataGenerator {
                 return FIRST_NAMES[random.nextInt(FIRST_NAMES.length)] + " "
                                 + MIDDLE_NAMES[random.nextInt(MIDDLE_NAMES.length)] + " "
                                 + LAST_NAMES[random.nextInt(LAST_NAMES.length)];
+        }
+
+        private static String randomAddress() {
+                return (1 + random.nextInt(299)) + " "
+                                + STREET_NAMES[random.nextInt(STREET_NAMES.length)]
+                                + " Street "
+                                + CITY_NAMES[random.nextInt(CITY_NAMES.length)];
         }
 
         private static String createEmail(String fullName, int number) {

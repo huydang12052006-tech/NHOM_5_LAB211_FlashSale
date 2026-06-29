@@ -132,6 +132,7 @@ public class AuthController {
                     fullName,
                     phone,
                     email,
+                    "",
                     CustomerTier.NORMAL,
                     0.0,
                     true

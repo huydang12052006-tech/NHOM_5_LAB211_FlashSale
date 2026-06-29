@@ -17,6 +17,8 @@ public class Customer extends BaseEntity {
 
     private String email;
 
+    private String address;
+
     private CustomerTier tier;
 
     private double totalSpent;
@@ -40,6 +42,20 @@ public class Customer extends BaseEntity {
                     CustomerTier tier,
                     double totalSpent,
                     boolean active) {
+        this(id, createdAt, updatedAt, userId, fullName, phone, email, "", tier, totalSpent, active);
+    }
+
+    public Customer(String id,
+                    LocalDateTime createdAt,
+                    LocalDateTime updatedAt,
+                    String userId,
+                    String fullName,
+                    String phone,
+                    String email,
+                    String address,
+                    CustomerTier tier,
+                    double totalSpent,
+                    boolean active) {
 
         super(id,createdAt,updatedAt);
 
@@ -47,6 +63,7 @@ public class Customer extends BaseEntity {
         this.fullName = fullName;
         this.phone = phone;
         this.email = email;
+        this.address = address;
         this.tier = tier;
         this.totalSpent = totalSpent;
         this.active = active;
@@ -88,6 +105,14 @@ public class Customer extends BaseEntity {
         this.email = email;
     }
 
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
     public CustomerTier getTier() {
         return tier;
     }
@@ -127,6 +152,7 @@ public class Customer extends BaseEntity {
                 escapeCsv(fullName),
                 escapeCsv(phone),
                 escapeCsv(email),
+                escapeCsv(address),
                 tier.name(),
                 String.valueOf(totalSpent),
                 String.valueOf(active)
@@ -137,7 +163,9 @@ public class Customer extends BaseEntity {
     public void fromCsvLine(String csv) {
 
         String[] parts = csv.split(",", -1);
-        int offset = parts.length >= 10 ? 1 : 0;
+        boolean hasUserId = parts.length >= 10;
+        boolean hasAddress = parts.length >= 11;
+        int offset = hasUserId ? 1 : 0;
 
         setId(parts[0]);
 
@@ -149,7 +177,7 @@ public class Customer extends BaseEntity {
                 LocalDateTime.parse(parts[2])
         );
 
-        this.userId = offset == 1 ? parts[3] : null;
+        this.userId = hasUserId ? parts[3] : null;
 
         this.fullName = parts[3 + offset];
 
@@ -157,14 +185,16 @@ public class Customer extends BaseEntity {
 
         this.email = parts[5 + offset];
 
+        this.address = hasAddress ? parts[6 + offset] : "";
+
         this.tier =
-                CustomerTier.valueOf(parts[6 + offset]);
+                CustomerTier.valueOf(parts[6 + offset + (hasAddress ? 1 : 0)]);
 
         this.totalSpent =
-                Double.parseDouble(parts[7 + offset]);
+                Double.parseDouble(parts[7 + offset + (hasAddress ? 1 : 0)]);
 
         this.active =
-                Boolean.parseBoolean(parts[8 + offset]);
+                Boolean.parseBoolean(parts[8 + offset + (hasAddress ? 1 : 0)]);
     }
 
     // =========================
@@ -180,6 +210,7 @@ public class Customer extends BaseEntity {
                 ", fullName='" + fullName + '\'' +
                 ", phone='" + phone + '\'' +
                 ", email='" + email + '\'' +
+                ", address='" + address + '\'' +
                 ", tier=" + tier +
                 ", totalSpent=" + totalSpent +
                 ", active=" + active +

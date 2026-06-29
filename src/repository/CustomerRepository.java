@@ -1,5 +1,6 @@
 package repository;
 
+import java.time.LocalDateTime;
 import model.Entity.Customer;
 
 public class CustomerRepository extends CsvRepository<Customer> {
@@ -24,6 +25,16 @@ public class CustomerRepository extends CsvRepository<Customer> {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    public boolean updateAddress(String customerId, String address) {
+        Customer customer = findById(customerId);
+        if (customer == null) {
+            return false;
+        }
+        customer.setAddress(address);
+        customer.setUpdatedAt(LocalDateTime.now());
+        return update(customer);
     }
 }
     

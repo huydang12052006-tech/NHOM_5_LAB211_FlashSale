@@ -388,6 +388,20 @@ public class Main {
             }
 
             int quantity = orderView.inputQuantity();
+            if (quantity <= 0) {
+                System.out.println("[ERROR] Quantity must be greater than 0");
+                return;
+            }
+
+            String action = inputOrderAction();
+            if (action == null) {
+                return;
+            }
+            if ("2".equals(action)) {
+                cartController.addItem(customer.getId(), item.getId(), item.getProductId(), quantity);
+                System.out.println("[SUCCESS] Product was saved in your cart.");
+                return;
+            }
 
             String orderId = orderController.placeFLashItem(
                     customer.getId(),
@@ -484,6 +498,16 @@ public class Main {
             System.out.println("Quantity: " + quantity);
             System.out.println("Total: " + (product.getOriginalPrice() * quantity));
 
+            String action = inputOrderAction();
+            if (action == null) {
+                return;
+            }
+            if ("2".equals(action)) {
+                cartController.addItem(customer.getId(), null, productId, quantity);
+                System.out.println("[SUCCESS] Product was saved in your cart.");
+                return;
+            }
+
             PaymentMethod method = orderView.inputPaymentMethod();
 
             String orderId = orderController.placeRegularOrder(customer.getId(), productId,
@@ -538,6 +562,22 @@ public class Main {
             }
         }
         return false;
+    }
+
+    private String inputOrderAction() {
+        System.out.println("1. Pay now");
+        System.out.println("2. Add to cart");
+        System.out.println("0. Back");
+        System.out.print("Choose: ");
+        String choice = scanner.nextLine().trim();
+        if ("1".equals(choice) || "2".equals(choice)) {
+            return choice;
+        }
+        if ("0".equals(choice)) {
+            return null;
+        }
+        System.out.println("[FAILED] Invalid choice.");
+        return null;
     }
 
     private void checkOrderStatus() {
@@ -1245,6 +1285,20 @@ public class Main {
             }
 
             int quantity = orderView.inputQuantity();
+            if (quantity <= 0) {
+                System.out.println("[ERROR] Quantity must be greater than 0");
+                return;
+            }
+
+            String action = inputOrderAction();
+            if (action == null) {
+                return;
+            }
+            if ("2".equals(action)) {
+                cartController.addItem(customer.getId(), item.getId(), item.getProductId(), quantity);
+                System.out.println("[SUCCESS] Product was saved in your cart.");
+                return;
+            }
 
             String orderId = orderController.placeFLashItem(
                     customer.getId(),

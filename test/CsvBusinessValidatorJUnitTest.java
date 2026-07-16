@@ -380,12 +380,12 @@ public class CsvBusinessValidatorJUnitTest {
         }
 
         private void loadPayments() throws Exception {
-            Path path = Paths.get("data", "payments.csv");
+            Path path = Paths.get("data", "paytransactions.csv");
             if (!Files.exists(path)) {
                 return;
             }
 
-            for (String[] s : readCsv("payments.csv")) {
+            for (String[] s : readCsv("paytransactions.csv")) {
                 Payment payment = new Payment();
                 payment.id = s[0];
                 payment.createdAt = LocalDateTime.parse(s[1]);
@@ -405,9 +405,23 @@ public class CsvBusinessValidatorJUnitTest {
             for (String[] s : readCsv("transactions.csv")) {
                 Transaction transaction = new Transaction();
                 transaction.id = s[0];
-                transaction.createdAt = LocalDateTime.parse(s[1]);
-                transaction.orderId = s[3];
+                if (s.length >= 12 && !isDateTime(s[1])) {
+                    transaction.createdAt = LocalDateTime.parse(s[10]);
+                    transaction.orderId = "";
+                } else {
+                    transaction.createdAt = LocalDateTime.parse(s[1]);
+                    transaction.orderId = s[3];
+                }
                 transactions.add(transaction);
+            }
+        }
+
+        private boolean isDateTime(String value) {
+            try {
+                LocalDateTime.parse(value);
+                return true;
+            } catch (RuntimeException e) {
+                return false;
             }
         }
 

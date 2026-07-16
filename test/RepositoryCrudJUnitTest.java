@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.util.List;
 import model.BaseEntity.BaseEntity;
 import model.Entity.Customer;
 import model.Entity.FlashSaleEvent;
@@ -173,9 +174,9 @@ public class RepositoryCrudJUnitTest {
     @Test
     void paymentRepositoryCrud() throws Exception {
         runCrudAssertions(
-                new PaymentRepository(testFile("payments.csv")),
-                testFile("payments.csv"),
-                "payments.csv",
+                new PaymentRepository(testFile("paytransactions.csv")),
+                testFile("paytransactions.csv"),
+                "paytransactions.csv",
                 new Payment("JUNIT_PAY001", CREATED_AT, UPDATED_AT,
                         "JUNIT_O001", "JUNIT_C001", PaymentMethod.CASH, 1000.0),
                 new Payment("JUNIT_PAY002", CREATED_AT, UPDATED_AT,
@@ -199,6 +200,24 @@ public class RepositoryCrudJUnitTest {
                 new OrderTransaction("JUNIT_TX002", CREATED_AT, UPDATED_AT,
                         "JUNIT_O002", "Thread-2", LockMechanism.OPTIMISTIC_LOCK,
                         true, 1, 95L, "ok updated"));
+    }
+
+    @Test
+    void orderTransactionRepositoryResetClearsExistingRows() throws Exception {
+        Path transactionFile = testFile("transactions.csv");
+        OrderTransactionRepository repository = new OrderTransactionRepository(transactionFile.toString());
+
+        repository.save(new OrderTransaction("OLD_TX001", CREATED_AT, UPDATED_AT,
+                "JUNIT_O001", "Thread-1", LockMechanism.NO_LOCK,
+                false, 1, 120L, "old"));
+
+        repository.clearFile();
+
+        List<OrderTransaction> transactions = repository.findAll();
+        assertTrue(transactions.isEmpty(), "Cleared file should not contain transaction rows");
+        assertTrue(Files.exists(transactionFile), "Cleared file should still exist");
+        assertEquals(OrderTransactionRepository.BENCHMARK_HEADER,
+                Files.readAllLines(transactionFile).get(0));
     }
 
     @Test
@@ -294,11 +313,11 @@ public class RepositoryCrudJUnitTest {
         );
 
         int paymentRows = measureRead(
-                "payments.csv",
+                "paytransactions.csv",
                 new RowReader() {
                     @Override
                     public int read() {
-                        return new PaymentRepository("data/payments.csv")
+                        return new PaymentRepository("data/paytransactions.csv")
                                 .findAll()
                                 .size();
                     }

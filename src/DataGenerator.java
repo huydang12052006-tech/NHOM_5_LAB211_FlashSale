@@ -253,7 +253,7 @@ public class DataGenerator {
                         generatePayments();
 
                         // Phase 9: Generate OrderTransactions CSV
-                        generateOrderTransactions();
+                        // generateOrderTransactions();
 
                         // Phase 10: Generate saved customer-cart rows
                         generateCartItems(NUM_CART_ITEMS);
@@ -984,7 +984,7 @@ public class DataGenerator {
 
         private static void generatePayments() throws IOException {
 
-                BufferedWriter bw = new BufferedWriter(new FileWriter("data/payments.csv"));
+                BufferedWriter bw = new BufferedWriter(new FileWriter("data/paytransactions.csv"));
 
                 bw.write("id,createdAt,updatedAt,orderId,customerId,paymentMethod,amount");
                 bw.newLine();
@@ -1036,67 +1036,67 @@ public class DataGenerator {
         // ORDER TRANSACTIONS (one per order)
         // =========================================================
 
-        private static void generateOrderTransactions() throws IOException {
+        // private static void generateOrderTransactions() throws IOException {
 
-                BufferedWriter bw = new BufferedWriter(new FileWriter("data/transactions.csv"));
+        //         BufferedWriter bw = new BufferedWriter(new FileWriter("data/transactions.csv"));
 
-                bw.write("id,createdAt,updatedAt,orderId,threadName,mechanism,success,retryCount,executionTimeMs,message");
-                bw.newLine();
+        //         bw.write("id,createdAt,updatedAt,orderId,threadName,mechanism,success,retryCount,executionTimeMs,message");
+        //         bw.newLine();
 
-                int txCounter = 0;
+        //         int txCounter = 0;
 
-                for (Map.Entry<String, String> entry : orderStatusMap.entrySet()) {
+        //         for (Map.Entry<String, String> entry : orderStatusMap.entrySet()) {
 
-                        String orderId = entry.getKey();
-                        String status = entry.getValue();
+        //                 String orderId = entry.getKey();
+        //                 String status = entry.getValue();
 
-                        txCounter++;
-                        String id = "TX" + String.format("%06d", txCounter);
+        //                 txCounter++;
+        //                 String id = "TX" + String.format("%06d", txCounter);
 
-                        // Prefer transaction time after payment, else after order createdAt
-                        LocalDateTime baseTime = orderPaymentTimeMap.getOrDefault(orderId, orderCreatedAtMap.getOrDefault(orderId, randomDateTime()));
-                        LocalDateTime createdAt = baseTime.plusSeconds(random.nextInt(3600));
-                        LocalDateTime updatedAt = randomUpdatedAt(createdAt);
+        //                 // Prefer transaction time after payment, else after order createdAt
+        //                 LocalDateTime baseTime = orderPaymentTimeMap.getOrDefault(orderId, orderCreatedAtMap.getOrDefault(orderId, randomDateTime()));
+        //                 LocalDateTime createdAt = baseTime.plusSeconds(random.nextInt(3600));
+        //                 LocalDateTime updatedAt = randomUpdatedAt(createdAt);
 
-                        String threadName = THREAD_NAMES[random.nextInt(THREAD_NAMES.length)];
+        //                 String threadName = THREAD_NAMES[random.nextInt(THREAD_NAMES.length)];
 
-                        String mechanism = orderLockMap.get(orderId);
+        //                 String mechanism = orderLockMap.get(orderId);
 
-                        boolean success = "SUCCESS".equals(status);
+        //                 boolean success = "SUCCESS".equals(status);
 
-                        int retryCount;
-                        if (success) {
-                                retryCount = random.nextInt(3); // 0-2 retries
-                        } else {
-                                retryCount = 1 + random.nextInt(5); // 1-5 retries
-                        }
+        //                 int retryCount;
+        //                 if (success) {
+        //                         retryCount = random.nextInt(3); // 0-2 retries
+        //                 } else {
+        //                         retryCount = 1 + random.nextInt(5); // 1-5 retries
+        //                 }
 
-                        long executionTimeMs = 5 + random.nextInt(500); // 5-504 ms
+        //                 long executionTimeMs = 5 + random.nextInt(500); // 5-504 ms
 
-                        String message;
-                        if (success) {
-                                message = TX_MESSAGES_SUCCESS[random.nextInt(TX_MESSAGES_SUCCESS.length)];
-                        } else {
-                                message = TX_MESSAGES_FAIL[random.nextInt(TX_MESSAGES_FAIL.length)];
-                        }
+        //                 String message;
+        //                 if (success) {
+        //                         message = TX_MESSAGES_SUCCESS[random.nextInt(TX_MESSAGES_SUCCESS.length)];
+        //                 } else {
+        //                         message = TX_MESSAGES_FAIL[random.nextInt(TX_MESSAGES_FAIL.length)];
+        //                 }
 
-                        bw.write(String.join(",",
-                                        id,
-                                        createdAt.format(formatter),
-                                        updatedAt.format(formatter),
-                                        orderId,
-                                        threadName,
-                                        mechanism,
-                                        String.valueOf(success),
-                                        String.valueOf(retryCount),
-                                        String.valueOf(executionTimeMs),
-                                        message));
+        //                 bw.write(String.join(",",
+        //                                 id,
+        //                                 createdAt.format(formatter),
+        //                                 updatedAt.format(formatter),
+        //                                 orderId,
+        //                                 threadName,
+        //                                 mechanism,
+        //                                 String.valueOf(success),
+        //                                 String.valueOf(retryCount),
+        //                                 String.valueOf(executionTimeMs),
+        //                                 message));
 
-                        bw.newLine();
-                }
+        //                 bw.newLine();
+        //         }
 
-                bw.close();
-        }
+        //         bw.close();
+        // }
 
         // =========================================================
         // HELPER METHODS

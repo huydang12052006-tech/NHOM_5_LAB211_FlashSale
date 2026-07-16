@@ -228,11 +228,11 @@ public class CsvLineJUnitTest {
         OrderTransaction transaction = new OrderTransaction(
                 "T001", CREATED_AT, UPDATED_AT,
                 "O001", "worker-1", LockMechanism.FILE_LOCK,
-                true, 1, 35L, "ok, completed");
+                true, 1, 35L, 5, 4, 12, 13, "ok, completed");
 
         assertEquals(
-                "T001,2026-01-02T03:04:05,2026-02-03T04:05:06,"
-                        + "O001,worker-1,FILE_LOCK,true,1,35,ok  completed",
+                "T001,worker-1,FILE_LOCK,true,1,35,5,4,12,13,"
+                        + "2026-01-02T03:04:05,ok  completed",
                 transaction.toCsvLine()
         );
     }
@@ -241,16 +241,19 @@ public class CsvLineJUnitTest {
     void orderTransactionFromCsvLine() {
         OrderTransaction transaction = new OrderTransaction();
         transaction.fromCsvLine(
-                "T002,2026-01-02T03:04:05,2026-02-03T04:05:06,"
-                        + "O002,worker-2,NO_LOCK,false,3,88,failed");
+                "T002,worker-2,NO_LOCK,false,3,88,2,-1,7,8,"
+                        + "2026-01-02T03:04:05,failed");
 
         assertBaseFields(transaction, "T002");
-        assertEquals("O002", transaction.getOrderId());
         assertEquals("worker-2", transaction.getThreadName());
         assertEquals(LockMechanism.NO_LOCK, transaction.getMechanism());
         assertFalse(transaction.isSuccess());
         assertEquals(3, transaction.getRetryCount());
         assertEquals(88L, transaction.getExecutionTimeMs());
+        assertEquals(2, transaction.getStockBefore());
+        assertEquals(-1, transaction.getStockAfter());
+        assertEquals(7, transaction.getVersionBefore());
+        assertEquals(8, transaction.getVersionAfter());
         assertEquals("failed", transaction.getMessage());
     }
 

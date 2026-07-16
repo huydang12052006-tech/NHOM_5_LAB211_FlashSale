@@ -5,7 +5,7 @@ import model.Entity.Payment;
 public class PaymentRepository extends CsvRepository<Payment> {
 
     public PaymentRepository() {
-        super("data/payments.csv");
+        super("data/paytransactions.csv");
     }
 
     public PaymentRepository(String filePath) {

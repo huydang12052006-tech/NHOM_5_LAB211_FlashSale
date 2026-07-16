@@ -5,7 +5,9 @@ import controller.OrderController;
 import controller.ProductController;
 import controller.SimulatorController;
 import exception.FlashSaleException;
+import java.io.PrintStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +57,7 @@ public class Main {
         this.orderView = new OrderView();
         this.flashSaleView = new FlashSaleView();
         this.userView = new UserView();
-        this.simulatorView = new SimulatorView();
+        this.simulatorView = new SimulatorView(scanner);
 
         this.productController = new ProductController(new repository.ProductRepository());
         this.flashSaleController = new FlashSaleController(
@@ -74,13 +76,22 @@ public class Main {
                 productView,
                 orderView,
                 flashSaleView);
-        this.simulatorController = new SimulatorController();
+        this.simulatorController = new SimulatorController(
+                new repository.FlashSaleRepository(),
+                new repository.OrderRepository(),
+                new repository.OrderTransactionRepository(),
+                this.simulatorView);
 
         this.configuredThreadCount = 100;
         this.selectedLockMechanism = LockMechanism.NO_LOCK;
     }
 
     public static void main(String[] args) {
+        try {
+            System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8.name()));
+        } catch (java.io.UnsupportedEncodingException e) {
+            System.out.println("[WARN] UTF-8 console output is not available.");
+        }
         new Main().run();
     }
 
@@ -299,6 +310,9 @@ public class Main {
             System.out.println("2. Edit a Sale Event");
             System.out.println("3. Manage Accounts");
             System.out.println("4. View Account Details");
+            System.out.println("5. Configure Thread Count for Simulation");
+            System.out.println("6. Configure System Lock Mechanism");
+            System.out.println("7. Run 4-Mechanism Simulation");
             System.out.println("0. Sign Out");
             System.out.print("Choose: ");
 
@@ -312,6 +326,12 @@ public class Main {
                 manageAccount();
             } else if ("4".equals(choice)) {
                 viewAccount();
+            } else if ("5".equals(choice)) {
+                configureThreadCount();
+            } else if ("6".equals(choice)) {
+                configureLockMechanism();
+            } else if ("7".equals(choice)) {
+                runConcurrentOrders();
             } else if ("0".equals(choice)) {
                 authController.logout();
                 back = true;
@@ -320,6 +340,8 @@ public class Main {
             }
         }
     }
+
+    // Simulation Lab menu removed; simulation is now available via Administration.
 
     private void viewEvents() {
         List<FlashSaleEvent> allEvents = flashSaleController.getAllEvents();
@@ -955,18 +977,24 @@ public class Main {
     }
 
     private void viewThroughputReport() {
-        List<OrderTransaction> transactions = simulatorController.getAllTransactions();
-        int success = 0;
-        long totalTime = 0L;
+        List<OrderTransaction> transactions = simulatorController.getLatestTransactions();
+        if (transactions.isEmpty()) {
+            transactions = simulatorController.getAllTransactions();
+        }
+        long totalTime = simulatorController.getLatestElapsedMs();
 
         for (OrderTransaction transaction : transactions) {
-            if (transaction.isSuccess()) {
-                success++;
+            if (totalTime == 0L) {
+                totalTime += transaction.getExecutionTimeMs();
             }
-            totalTime += transaction.getExecutionTimeMs();
         }
 
-        simulatorView.showThroughputReport(transactions.size(), success, totalTime, simulatorController.measureTPS());
+        simulatorView.showThroughputReport(
+                transactions.size(),
+                simulatorController.getLatestRawSuccessCount(),
+                simulatorController.getLatestValidSuccessCount(),
+                totalTime,
+                simulatorController.measureTPS());
     }
 
     private void viewNegativeStockReport() {
@@ -979,9 +1007,14 @@ public class Main {
         simulatorView.showThreadCountConfigured(configuredThreadCount);
     }
 
+    private void configureLockMechanism() {
+        selectedLockMechanism = simulatorView.inputLockMechanism();
+        simulatorView.showLockMechanismConfigured(selectedLockMechanism);
+    }
+
     private void runConcurrentOrders() {
         simulatorView.showSimulationHeader(configuredThreadCount, selectedLockMechanism);
-        simulatorController.startSimulation();
+        simulatorController.startSimulation(configuredThreadCount);
     }
 
     private void measureRetryRate() {

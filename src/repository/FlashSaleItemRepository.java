@@ -13,8 +13,15 @@ import exception.*;
 public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
     
     private static final String FILE_PATH = "data/flash_items.csv";
-    private static final int MAX_RETRY = 3;
+    private static final int MAX_RETRY = 20;
+    private static final int OPTIMISTIC_RACE_WINDOW_MS = 0;
+    private static final int OPTIMISTIC_BACKOFF_BASE_MS = 0;
+    private static final int OPTIMISTIC_BACKOFF_MAX_MS = 0;
+    private static final int SIMULATED_BUSINESS_LOGIC_ITERATIONS = 500_000;
+    private static volatile double simulatedWorkloadSink = 0.0;
     private final String lockFilePath;
+    private final ThreadLocal<Integer> lastOptimisticRetryCount =
+            ThreadLocal.withInitial(() -> 0);
 
     public FlashSaleItemRepository() {
         this(FILE_PATH);
@@ -50,29 +57,8 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             return false;
         }
 
-        /*
-        RACE WINDOW
-
-        Thread A đọc soldQty = 8
-        Thread B đọc soldQty = 8
-
-        limitedQty = 10
-
-        cả hai đều thấy còn hàng
-        cả hai cùng update
-
-        kết quả:
-        soldQty = 12
-         */
         if (item.getSoldQty() + quantity <= item.getLimitedQty()) {
-
-            // giả lập delay I/O để race condition dễ xảy ra
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
+            simulateBusinessLogic();
             item.setSoldQty(item.getSoldQty() + quantity);
 
             rewriteFile(items);
@@ -104,6 +90,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             throw new OutOfStockException("Not enough stock for " + flashItemId);
         }
 
+        simulateBusinessLogic();
         item.setSoldQty(item.getSoldQty() + quantity);
 
         rewriteFile(items);
@@ -162,6 +149,7 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
                 throw new OutOfStockException("Not enough stock for " + flashItemId);
             }
 
+            simulateBusinessLogic();
             target.setSoldQty(target.getSoldQty() + quantity);
 
             // rewrite file while still holding the lock
@@ -195,14 +183,18 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             throws IOException, FlashSaleException {
 
         int retry = 0;
+        lastOptimisticRetryCount.set(0);
 
         while (retry < MAX_RETRY) {
 
 
-            FlashSaleItem item = findById( flashItemId);
+            FlashSaleItem item = readOptimisticSnapshot(flashItemId);
 
             if (item == null) {
-                return false;
+                retry++;
+                lastOptimisticRetryCount.set(retry);
+                backoffOptimisticRetry(retry);
+                continue;
             }
 
             int currentVersion = item.getVersion();
@@ -216,18 +208,12 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
                 throw new OutOfStockException("Not enough stock for " + flashItemId);
             }
 
-            /*
-            giả lập race window
-             */
-            try {
-                Thread.sleep(30);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            simulateBusinessLogic();
 
             /*
             RE-READ latest data
              */
+            synchronized (lock) {
             List<FlashSaleItem> latestItems = findAll();
 
             FlashSaleItem latestItem = findInList(latestItems, flashItemId);
@@ -238,8 +224,8 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
              */
             if (latestItem == null) {
                 retry++;
-                System.out.println(Thread.currentThread().getName()
-                        + " latestItem=null -> retry " + retry);
+                lastOptimisticRetryCount.set(retry);
+                backoffOptimisticRetry(retry);
                 continue;
             }
 
@@ -248,15 +234,18 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
             => thread khác đã update trước
              */
             if (latestItem.getVersion() != currentVersion) {
+                if (latestItem.getSoldQty() + quantity > latestItem.getLimitedQty()) {
+                    lastOptimisticRetryCount.set(retry);
+                    throw new OutOfStockException("Not enough stock for " + flashItemId);
+                }
+
                 retry++;
+                lastOptimisticRetryCount.set(retry);
+            }
 
-                System.out.println(
-                        Thread.currentThread().getName()
-                        + " version conflict -> retry "
-                        + retry
-                );
-
-                continue;
+            if (latestItem.getSoldQty() + quantity > latestItem.getLimitedQty()) {
+                lastOptimisticRetryCount.set(retry);
+                throw new OutOfStockException("Not enough stock for " + flashItemId);
             }
 
             /*
@@ -273,11 +262,66 @@ public class FlashSaleItemRepository extends CsvRepository<FlashSaleItem> {
 
             rewriteFile(latestItems);
 
+            lastOptimisticRetryCount.set(retry);
             return true;
+            }
         }
 
         // nếu retry vượt mức, báo lỗi rõ ràng
         throw new VersionConflictException("Optimistic lock failed after " + MAX_RETRY + " retries for " + flashItemId);
+    }
+
+    private static void simulateBusinessLogic() {
+        double value = 0.0;
+        for (int i = 0; i < SIMULATED_BUSINESS_LOGIC_ITERATIONS; i++) {
+            value += Math.sqrt(i + 1);
+        }
+        simulatedWorkloadSink = value;
+    }
+
+    private void backoffOptimisticRetry(int retry) {
+        int sleepMs = Math.min(
+                OPTIMISTIC_BACKOFF_MAX_MS,
+                OPTIMISTIC_BACKOFF_BASE_MS * retry
+        );
+        if (sleepMs <= 0) {
+            return;
+        }
+
+        try {
+            Thread.sleep(sleepMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    public int getLastOptimisticRetryCount() {
+        return lastOptimisticRetryCount.get();
+    }
+
+    private FlashSaleItem readOptimisticSnapshot(String flashItemId) {
+        File file = new File(filePath);
+        if (!file.exists()) {
+            return null;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty() || line.startsWith("id,")) {
+                    continue;
+                }
+
+                FlashSaleItem item = mapFromCsv(line);
+                if (item != null && item.getId().equals(flashItemId)) {
+                    return item;
+                }
+            }
+        } catch (IOException e) {
+            return null;
+        }
+
+        return null;
     }
 
     /**

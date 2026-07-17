@@ -40,6 +40,7 @@ public class SimulatorController {
     private static final int OPTIMISTIC_RETRY_LIMIT = 20;
     private static final int FILE_LOCK_DELAY_MS = 3;
     private static final int SIMULATED_BUSINESS_LOGIC_ITERATIONS = 500_000;
+    private static final int BENCHMARK_WARMUP_RUNS = 1;
     private static volatile double simulatedWorkloadSink = 0.0;
 
     private final FlashSaleRepository flashSaleRepository;
@@ -114,8 +115,16 @@ public class SimulatorController {
 
         orderTransactionRepository.clearFile();
 
+        List<LockMechanism> mechanismsToRun;
+        if (selectedMechanism == null) {
+            mechanismsToRun = Arrays.asList(LockMechanism.values());
+        } else {
+            mechanismsToRun = Arrays.asList(selectedMechanism);
+        }
+
         int stockLimit = calculateInitialStock(threadCount);
         List<BenchmarkScenario> scenarios = createBenchmarkScenarios(threadCount, stockLimit);
+        warmUpBenchmarkRuns(targetItem.getId(), threadCount, scenarios, mechanismsToRun);
         AtomicInteger transactionSequence = new AtomicInteger(findMaxTransactionNumber() + 1);
         List<SimulationSummary> summaries = new ArrayList<SimulationSummary>();
         List<OrderTransaction> newTransactions = new ArrayList<OrderTransaction>();
@@ -127,13 +136,6 @@ public class SimulatorController {
                 threadCount,
                 REPEAT_RUNS
         );
-
-        List<LockMechanism> mechanismsToRun;
-        if (selectedMechanism == null) {
-            mechanismsToRun = Arrays.asList(LockMechanism.values());
-        } else {
-            mechanismsToRun = Arrays.asList(selectedMechanism);
-        }
 
         for (BenchmarkScenario scenario : scenarios) {
             for (LockMechanism mechanism : mechanismsToRun) {
@@ -538,18 +540,29 @@ public class SimulatorController {
                             LockMechanism mechanism,
                             int productIndex) {
         if (mechanism == LockMechanism.SYNCHRONIZED) {
-            return inventory.sellWithSynchronized(productIndex, QUANTITY_PER_ORDER);
+            return completeSuccessfulOrder(
+                    inventory.sellWithSynchronized(productIndex, QUANTITY_PER_ORDER)
+            );
         }
         if (mechanism == LockMechanism.FILE_LOCK) {
+            SellResult result;
             synchronized (fileLockGate) {
                 simulateFileLockDelay();
-                return inventory.sellWithFileLock(productIndex, QUANTITY_PER_ORDER);
+                result = inventory.sellWithFileLock(productIndex, QUANTITY_PER_ORDER);
             }
+            return completeSuccessfulOrder(result);
         }
         if (mechanism == LockMechanism.OPTIMISTIC_LOCK) {
             return inventory.sellWithOptimisticLock(productIndex, QUANTITY_PER_ORDER);
         }
         return inventory.sellWithNoLock(productIndex, QUANTITY_PER_ORDER);
+    }
+
+    private SellResult completeSuccessfulOrder(SellResult result) {
+        if (result.success) {
+            simulateBusinessLogic();
+        }
+        return result;
     }
 
     private void persistTransactions(List<OrderTransaction> transactions) {
@@ -609,6 +622,33 @@ public class SimulatorController {
             value += Math.sqrt(i + 1);
         }
         simulatedWorkloadSink = value;
+    }
+
+    private void warmUpBenchmarkRuns(String flashItemId,
+                                     int threadCount,
+                                     List<BenchmarkScenario> scenarios,
+                                     List<LockMechanism> mechanismsToRun) {
+        AtomicInteger warmupSequence = new AtomicInteger(1);
+
+        for (int run = 1; run <= BENCHMARK_WARMUP_RUNS; run++) {
+            for (BenchmarkScenario scenario : scenarios) {
+                for (LockMechanism mechanism : mechanismsToRun) {
+                    InMemoryInventory inventory = new InMemoryInventory(
+                            scenario.getProductCount(),
+                            scenario.getStockPerProduct()
+                    );
+                    runConcurrentOrders(
+                            inventory,
+                            flashItemId,
+                            threadCount,
+                            scenario,
+                            mechanism,
+                            0,
+                            warmupSequence
+                    );
+                }
+            }
+        }
     }
 
     private FlashSaleItem findSimulationTarget() {
@@ -901,9 +941,6 @@ public class SimulatorController {
                         "Not enough stock"
                 );
             }
-
-            // simulate business logic inside critical section / plain update
-            simulateBusinessLogic();
 
             soldQtyByProduct[productIndex] = soldBefore + quantity;
             versionByProduct[productIndex] = versionBefore + 1;

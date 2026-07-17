@@ -471,3 +471,109 @@ Throughput Reduction < 30%
 | 4   | Do Tan Vu | Authentication & Payment Module |
 
 
+
+## 1) Compile
+
+Nếu máy bạn có Maven:
+```powershell
+cd d:\github\NHOM_5_LAB211_FlashSale
+mvn -DskipTests compile
+```
+
+Nếu môi trường không có Maven, dùng cách sau (đã kiểm tra được trên máy hiện tại):
+```powershell
+cd d:\github\NHOM_5_LAB211_FlashSale
+javac -encoding UTF-8 -d out $(Get-ChildItem -Recurse -Filter *.java -Path src | ForEach-Object { $_.FullName })
+```
+
+> Nếu dùng PowerShell trên Windows, lệnh trên sẽ hoạt động tốt. Nếu bạn dùng CMD thì dùng:
+```cmd
+cd /d d:\github\NHOM_5_LAB211_FlashSale
+javac -encoding UTF-8 -d out @<(
+  dir /s /b src\*.java
+)
+```
+
+---
+
+## 2) Chạy DataGenerator
+
+File chính để sinh dữ liệu là DataGenerator.java.
+
+Chạy:
+```powershell
+cd d:\github\NHOM_5_LAB211_FlashSale
+java -cp out DataGenerator
+```
+
+Sau khi chạy, dữ liệu sẽ được sinh vào thư mục:
+- data
+
+Các file thường dùng gồm:
+- products.csv
+- flash_events.csv
+- flash_items.csv
+- customers.csv
+- orders.csv
+- order_details.csv
+- paytransactions.csv
+- users.csv
+
+---
+
+## 3) Chạy Simulator
+
+Điểm vào chương trình chính là Main.java.
+
+Chạy:
+```powershell
+cd d:\github\NHOM_5_LAB211_FlashSale
+java -cp out Main
+```
+
+Khi chạy, bạn sẽ thấy menu console. Để vào phần Simulator:
+
+1. Chọn “4. Administration”
+2. Đăng nhập bằng tài khoản ADMIN
+   - Username/Password được tạo từ dữ liệu users.csv
+   - Mật khẩu theo quy ước trong code là:
+     ```text
+     pass + id
+     ```
+     Ví dụ: nếu user id là U00001 thì mật khẩu là:
+     ```text
+     passU00001
+     ```
+
+3. Trong menu Admin:
+   - “5. Configure Thread Count for Simulation”
+   - “6. Configure System Lock Mechanism”
+   - “7. Run 4-Mechanism Simulation”
+
+---
+
+## 4) Đọc kết quả
+
+Kết quả chạy Simulator sẽ được in trực tiếp trên console và có thể xuất ra file:
+- docs/simulation_result.txt
+
+Nếu bạn muốn xem kết quả sau khi chạy, mở file:
+```powershell
+notepad docs\simulation_result.txt
+```
+
+Ngoài ra, kết quả cũng có thể xem qua các báo cáo in ra trong console:
+- Dashboard hệ thống
+- Inventory report
+- Throughput report
+- Negative stock report
+
+---
+
+## 5) Lưu ý quan trọng
+
+- Trước khi chạy Simulator, nên chạy DataGenerator trước để có dữ liệu đầu vào.
+- Nếu bạn gặp lỗi encoding khi compile, hãy dùng:
+```powershell
+javac -encoding UTF-8 -d out $(Get-ChildItem -Recurse -Filter *.java -Path src | ForEach-Object { $_.FullName })
+``
